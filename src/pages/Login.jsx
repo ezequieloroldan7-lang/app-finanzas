@@ -72,7 +72,7 @@ export default function Login({ onSignIn, onSignUp, onSignInWithGoogle }) {
             </svg>
           </div>
           <div className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 font-semibold mb-1.5">
-            Mis Finanzas
+            VUE Finanzas
           </div>
           <h1 className="font-serif-display italic text-4xl text-zinc-50 leading-tight">
             {mode === 'signin' ? 'Bienvenido' : 'Crear cuenta'}

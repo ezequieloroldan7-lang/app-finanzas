@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Camera, User, Mail, LogOut, ChevronRight } from 'lucide-react';
+import { X, Camera, User, Mail, LogOut, Settings, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const EXCHANGE_OPTIONS = [
@@ -8,7 +8,7 @@ const EXCHANGE_OPTIONS = [
   { value: 'oficial', label: 'Oficial' },
 ];
 
-export default function ProfileModal({ userId, userEmail, onClose, onSignOut }) {
+export default function ProfileModal({ userId, userEmail, onClose, onSignOut, onOpenSettings }) {
   const [displayName, setDisplayName] = useState('');
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
@@ -32,10 +32,31 @@ export default function ProfileModal({ userId, userEmail, onClose, onSignOut }) 
     });
   }, []);
 
+  // Resize image to max 256x256 and return data URL — keeps user_metadata small.
+  const resizeToDataURL = (file, maxSize = 256, quality = 0.85) =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (ev) => { img.src = ev.target.result; };
+      reader.onerror = reject;
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      reader.readAsDataURL(file);
+    });
+
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setError('La foto no puede superar los 5 MB'); return; }
+    if (file.size > 10 * 1024 * 1024) { setError('La foto no puede superar los 10 MB'); return; }
     setPhotoFile(file);
     const reader = new FileReader();
     reader.onload = (ev) => setPhotoPreview(ev.target.result);
@@ -50,8 +71,10 @@ export default function ProfileModal({ userId, userEmail, onClose, onSignOut }) 
       let avatarUrl = photoPreview && !photoFile ? photoPreview : undefined;
 
       if (photoFile) {
+        // Try Supabase Storage first (preferred — supports large originals).
+        let storageOk = false;
         try {
-          const ext = photoFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+          const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
           const path = `${userId}/avatar.${ext}`;
           const { error: uploadErr } = await supabase.storage
             .from('avatars')
@@ -59,14 +82,18 @@ export default function ProfileModal({ userId, userEmail, onClose, onSignOut }) 
           if (!uploadErr) {
             const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
             avatarUrl = `${urlData?.publicUrl}?t=${Date.now()}`;
-          } else {
-            // Storage bucket may not exist — store photo as data URL in metadata (small photos only)
-            if (photoFile.size < 50 * 1024) {
-              avatarUrl = photoPreview;
-            }
+            storageOk = true;
           }
         } catch {
-          // Non-blocking — photo upload failure shouldn't prevent name save
+          // fall through to data URL fallback
+        }
+        // Fallback: resize + store as data URL inside auth user_metadata.
+        if (!storageOk) {
+          try {
+            avatarUrl = await resizeToDataURL(photoFile, 256, 0.85);
+          } catch {
+            avatarUrl = photoPreview; // last resort
+          }
         }
       }
 
@@ -75,6 +102,7 @@ export default function ProfileModal({ userId, userEmail, onClose, onSignOut }) 
 
       const { error: updateErr } = await supabase.auth.updateUser({ data: metaUpdate });
       if (updateErr) throw updateErr;
+      if (avatarUrl) setPhotoPreview(avatarUrl);
 
       try {
         localStorage.setItem(`pref_currency_${userId}`, preferredCurrency);
@@ -238,6 +266,30 @@ export default function ProfileModal({ userId, userEmail, onClose, onSignOut }) 
           >
             {saving ? 'Guardando…' : 'Guardar cambios'}
           </button>
+
+          {/* Ajustes shortcut group */}
+          {onOpenSettings && (
+            <div className="pt-3 border-t border-zinc-800 space-y-1.5">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Ajustes</p>
+              {[
+                { id: 'tarjetas', label: 'Tarjetas' },
+                { id: 'categorias', label: 'Categorías' },
+                { id: 'recurrentes', label: 'Gastos recurrentes' },
+                { id: 'presupuesto', label: 'Presupuesto' },
+                { id: 'datos', label: 'Datos e importación' },
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => onOpenSettings(item.id)}
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-sm text-zinc-200 transition-colors text-left"
+                >
+                  <Settings size={14} className="text-zinc-500" />
+                  <span className="flex-1">{item.label}</span>
+                  <ChevronRight size={14} className="text-zinc-500" />
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Sign out */}
           <button

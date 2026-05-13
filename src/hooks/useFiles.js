@@ -65,10 +65,33 @@ export function useFiles(userId) {
     if (file.size > MAX_SIZE_BYTES) {
       throw new Error('El archivo es demasiado grande. Máximo permitido: 20 MB.');
     }
-    const ext = file.name.split('.').pop();
+    // Derive a safe extension; fall back to MIME map if filename lacks one.
+    const dotIdx = file.name.lastIndexOf('.');
+    let ext = dotIdx > -1 ? file.name.slice(dotIdx + 1).toLowerCase() : '';
+    if (!ext || ext.length > 5) {
+      ext = file.type === 'application/pdf' ? 'pdf'
+        : file.type === 'image/png' ? 'png'
+        : file.type === 'image/webp' ? 'webp'
+        : 'jpg';
+    }
     const path = `${userId}/${Date.now()}.${ext}`;
-    const { error: uploadErr } = await supabase.storage.from(BUCKET).upload(path, file);
-    if (uploadErr) { console.error('uploadFile storage:', uploadErr); throw uploadErr; }
+    const { error: uploadErr } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (uploadErr) {
+      console.error('uploadFile storage:', uploadErr);
+      const msg = uploadErr.message || '';
+      if (/bucket not found/i.test(msg)) {
+        throw new Error('Bucket "user-files" no existe en Supabase Storage. Creálo y agregale políticas RLS.');
+      }
+      if (/duplicate|already exists/i.test(msg)) {
+        throw new Error('Ya existe un archivo con ese nombre. Probá de nuevo.');
+      }
+      if (/permission|policy|violates/i.test(msg)) {
+        throw new Error('Sin permisos en Storage. Verificá las políticas RLS del bucket "user-files".');
+      }
+      throw new Error('No se pudo subir el archivo: ' + msg);
+    }
 
     const row = {
       user_id: userId,
@@ -81,7 +104,19 @@ export function useFiles(userId) {
       notes: metadata.notes || null,
     };
     const { data, error: dbErr } = await supabase.from('files').insert(row).select().single();
-    if (dbErr) { console.error('uploadFile db:', dbErr); throw dbErr; }
+    if (dbErr) {
+      console.error('uploadFile db:', dbErr);
+      // Cleanup storage object so we don't leave orphans behind
+      try { await supabase.storage.from(BUCKET).remove([path]); } catch {}
+      const msg = dbErr.message || '';
+      if (/relation .* does not exist|files.*does not exist/i.test(msg)) {
+        throw new Error('La tabla "files" no existe en Supabase. Ejecutá las migraciones SQL.');
+      }
+      if (/permission|policy|violates row-level/i.test(msg)) {
+        throw new Error('Sin permisos para guardar el archivo. Revisá las políticas RLS de la tabla "files".');
+      }
+      throw new Error('No se pudo registrar el archivo: ' + msg);
+    }
     const newFile = fromDb(data);
     setFiles(prev => [newFile, ...prev]);
     return newFile;

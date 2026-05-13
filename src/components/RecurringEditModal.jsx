@@ -6,7 +6,6 @@ function RecurringEditModal({ item, cards, categories, onChange, onSave, onClose
   const valid =
     item.description.trim() &&
     parseFloat(item.amount) > 0 &&
-    item.cardId &&
     item.categoryId;
 
   function commitDay(raw) {
@@ -79,8 +78,18 @@ function RecurringEditModal({ item, cards, categories, onChange, onSave, onClose
             </div>
           )}
           <div>
-            <label className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Tarjeta</label>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Tarjeta (opcional)</label>
             <div className="flex gap-2 flex-wrap mt-1.5">
+              <button
+                onClick={() => onChange({ ...item, cardId: null })}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${
+                  !item.cardId
+                    ? 'bg-lime-300/10 border-lime-300 text-lime-100'
+                    : 'bg-zinc-900 border-zinc-800 text-zinc-400'
+                }`}
+              >
+                Sin tarjeta
+              </button>
               {cards.map(c => (
                 <button
                   key={c.id}

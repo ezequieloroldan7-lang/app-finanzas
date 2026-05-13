@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Plus, Settings, X, UserCircle2 } from 'lucide-react';
+import { CalendarDays, Plus, X, UserCircle2, FileText } from 'lucide-react';
 import { monthKey, uid } from '../lib/formatters';
 import { exportToExcel } from '../lib/exportExcel';
 import {
@@ -505,17 +505,10 @@ function Dashboard({ userId, userEmail, onSignOut }) {
           <header className="sticky top-0 z-20 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">Mis finanzas</div>
+                <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">VUE Finanzas</div>
                 <h1 className="text-2xl text-zinc-50 mt-0.5 font-serif-display italic">Inicio</h1>
               </div>
               <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setShowProfile(true)}
-                  aria-label="Mi perfil"
-                  className="p-2 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
-                >
-                  <UserCircle2 size={20} />
-                </button>
                 <button
                   onClick={() => setShowYearly(true)}
                   aria-label="Ver resumen anual"
@@ -524,11 +517,11 @@ function Dashboard({ userId, userEmail, onSignOut }) {
                   <CalendarDays size={20} />
                 </button>
                 <button
-                  onClick={() => setShowSettings(true)}
-                  aria-label="Configuración"
+                  onClick={() => setShowProfile(true)}
+                  aria-label="Mi perfil"
                   className="p-2 -mr-2 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
                 >
-                  <Settings size={20} />
+                  <UserCircle2 size={20} />
                 </button>
               </div>
             </div>
@@ -547,6 +540,23 @@ function Dashboard({ userId, userEmail, onSignOut }) {
                   setCurrentDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
                 }
               />
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setEditing(null); setAddNoCard(false); setShowAdd(true); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-lime-300/10 text-lime-300 border border-lime-300/20 hover:bg-lime-300/15 transition-colors text-sm font-medium"
+                >
+                  <Plus size={14} />
+                  Nuevo gasto
+                </button>
+                <button
+                  onClick={() => setShowImport(true)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 transition-colors text-sm"
+                >
+                  <FileText size={14} />
+                  Importar resumen
+                </button>
+              </div>
 
               <BalanceCard
                 totalIngresos={currentMonthIncome}
@@ -624,6 +634,9 @@ function Dashboard({ userId, userEmail, onSignOut }) {
           recurring={recurring}
           categories={categories}
           onOpenSettings={(tab) => { setSettingsInitialTab(tab || null); setShowSettings(true); }}
+          onOpenProfile={() => setShowProfile(true)}
+          onAddExpense={() => { setEditing(null); setAddNoCard(false); setShowAdd(true); }}
+          onImportResumen={() => setShowImport(true)}
           onEditExpense={(e) => {
             if (e.isRecurring) return;
             setEditing(e);
@@ -647,6 +660,10 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             expenses={expenses}
             sharedExpenses={sharedExpenses}
             categories={categories}
+            recurring={recurring}
+            cards={cards}
+            onSaveRecurring={saveRecurring}
+            onOpenProfile={() => setShowProfile(true)}
             userId={userId}
             sharedFolderId={myFolder?.id || null}
             partnerName={partnerMember?.displayName || null}
@@ -663,6 +680,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             }}
             onAdd={() => { setEditing(null); setAddNoCard(true); setAddShared(false); setShowAdd(true); }}
             onAddShared={() => { setEditing(null); setAddNoCard(true); setAddShared(true); setShowAdd(true); }}
+            onImportResumen={() => setShowImport(true)}
             onEditShared={(exp) => { setEditing(exp); setAddNoCard(true); setAddShared(true); setShowAdd(true); }}
             onEditPersonal={(exp) => { setEditing(exp); setAddNoCard(true); setAddShared(false); setShowAdd(true); }}
             onDelete={handleDeleteExpense}
@@ -693,6 +711,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
           incomeCategories={incomeCategories}
           onAdd={() => setShowAddIncome(true)}
           onDelete={deleteIncome}
+          onOpenProfile={() => setShowProfile(true)}
           currentDate={currentDate}
           onDateChange={setCurrentDate}
         />
@@ -706,6 +725,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
           onDelete={deleteFile}
           onDownload={handleFileDownload}
           onOpenImport={handleOpenImportFromFile}
+          onOpenProfile={() => setShowProfile(true)}
           onAddExpense={(prefill) => {
             setEditing({ ...prefill, cardId: null, totalCuotas: 1, currency: 'ARS' });
             setAddNoCard(true);
@@ -722,6 +742,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
           recurring={recurring}
           budget={budget}
           savingsGoal={savingsGoal}
+          onOpenProfile={() => setShowProfile(true)}
         />
       )}
 
@@ -733,6 +754,11 @@ function Dashboard({ userId, userEmail, onSignOut }) {
           userEmail={userEmail}
           onClose={() => setShowProfile(false)}
           onSignOut={() => { setShowProfile(false); onSignOut(); }}
+          onOpenSettings={(tab) => {
+            setShowProfile(false);
+            setSettingsInitialTab(tab || null);
+            setShowSettings(true);
+          }}
         />
       )}
 

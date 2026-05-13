@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Plus, Settings, ChevronDown, ChevronUp, Search, X, Pencil, Check } from 'lucide-react';
+import { Plus, Settings, ChevronDown, ChevronUp, Search, X, Pencil, Check, UserCircle2, FileText } from 'lucide-react';
 import { getAdjustedClosingDate } from '../lib/cuotas';
 import { formatARS, monthKey } from '../lib/formatters';
 import { getCuotasForMonth, getMonthlyTotals, getMoMByCategory } from '../lib/aggregations';
@@ -17,19 +17,31 @@ function getNextClosingDate(card) {
   const today = new Date();
   const y = today.getFullYear();
   const m = today.getMonth();
-  const todayStr = today.toISOString().slice(0, 10);
+  today.setHours(0, 0, 0, 0);
   const thisMonth = getAdjustedClosingDate(y, m, card.closingDay, card.closingDates || {});
-  if (thisMonth.toISOString().slice(0, 10) >= todayStr) return thisMonth;
+  if (thisMonth >= today) return thisMonth;
   const next = new Date(y, m + 1, 1);
   return getAdjustedClosingDate(next.getFullYear(), next.getMonth(), card.closingDay, card.closingDates || {});
 }
 
 function CardTile({ card, monthTotal, cuotasCount, cuotas, expenses, recurring, cards, categories, viewYear, viewMonth, onEdit, onEditExpense, onDeleteExpense, onSaveCard }) {
-  const nextClosing = getNextClosingDate(card);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const daysUntil = Math.ceil((nextClosing - today) / (1000 * 60 * 60 * 24));
-  const closingStr = nextClosing.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+  const todayY = today.getFullYear();
+  const todayM = today.getMonth();
+  const isViewingCurrent = viewYear === todayY && viewMonth === todayM;
+  const isViewingPast = (viewYear < todayY) || (viewYear === todayY && viewMonth < todayM);
+
+  // Show the closing date for the viewed month so the inline editor's effect is
+  // immediately visible. For future/current months, "Próx. cierre" is the next
+  // upcoming closing; for past months, we just show that month's closing.
+  const displayedClosing = useMemo(
+    () => getAdjustedClosingDate(viewYear, viewMonth, card.closingDay, card.closingDates || {}),
+    [viewYear, viewMonth, card.closingDay, card.closingDates],
+  );
+  const daysUntil = Math.ceil((displayedClosing - today) / (1000 * 60 * 60 * 24));
+  const closingStr = displayedClosing.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+  const closingLabel = isViewingCurrent ? 'Próx. cierre' : 'Cierre';
   const [expanded, setExpanded] = useState(false);
 
   // Quick closing-date override for the viewed month
@@ -115,9 +127,11 @@ function CardTile({ card, monthTotal, cuotasCount, cuotas, expenses, recurring, 
           </div>
         </div>
         <div className="text-right relative">
-          <div className="text-[10px] uppercase tracking-[0.15em] text-zinc-600">Próx. cierre</div>
+          <div className="text-[10px] uppercase tracking-[0.15em] text-zinc-600">{closingLabel}</div>
           <div className="flex items-center justify-end gap-1.5 mt-0.5">
-            <div className="text-sm font-medium text-zinc-300">{closingStr}</div>
+            <div key={`${viewYear}-${viewMonth}-${card.closingDates?.[viewKey] ?? card.closingDay}`} className="text-sm font-medium text-zinc-300">
+              {closingStr}
+            </div>
             {onSaveCard && (
               <button
                 onClick={openClosingEdit}
@@ -128,8 +142,12 @@ function CardTile({ card, monthTotal, cuotasCount, cuotas, expenses, recurring, 
               </button>
             )}
           </div>
-          <div className={`text-xs mt-0.5 ${daysUntil <= 3 ? 'text-amber-400' : 'text-zinc-600'}`}>
-            {daysUntil === 0 ? '¡Hoy!' : daysUntil === 1 ? 'Mañana' : `en ${daysUntil} días`}
+          <div className={`text-xs mt-0.5 ${!isViewingPast && daysUntil <= 3 ? 'text-amber-400' : 'text-zinc-600'}`}>
+            {isViewingPast
+              ? `hace ${Math.abs(daysUntil)} día${Math.abs(daysUntil) === 1 ? '' : 's'}`
+              : daysUntil < 0
+                ? `hace ${Math.abs(daysUntil)} día${Math.abs(daysUntil) === 1 ? '' : 's'}`
+                : daysUntil === 0 ? '¡Hoy!' : daysUntil === 1 ? 'Mañana' : `en ${daysUntil} días`}
           </div>
 
           {/* Inline closing-date editor for the viewed month */}
@@ -246,7 +264,7 @@ function CardTile({ card, monthTotal, cuotasCount, cuotas, expenses, recurring, 
   );
 }
 
-function TarjetasView({ cards, expenses, recurring, categories, onOpenSettings, onEditExpense, onDeleteExpense, onSaveCard, currentDate: currentDateProp = null, onDateChange }) {
+function TarjetasView({ cards, expenses, recurring, categories, onOpenSettings, onOpenProfile, onAddExpense, onImportResumen, onEditExpense, onDeleteExpense, onSaveCard, currentDate: currentDateProp = null, onDateChange }) {
   const todayInit = new Date();
   const [localDate, setLocalDate] = useState(
     () => new Date(todayInit.getFullYear(), todayInit.getMonth(), 1)
@@ -277,16 +295,27 @@ function TarjetasView({ cards, expenses, recurring, categories, onOpenSettings, 
   return (
     <div className="min-h-screen bg-zinc-950 pb-24">
       <header className="sticky top-0 z-20 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4">
-        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">Mis finanzas</div>
+        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">VUE Finanzas</div>
         <div className="flex items-center justify-between mt-0.5">
           <h1 className="text-2xl text-zinc-50 font-serif-display italic">Tarjetas</h1>
-          <button
-            onClick={onOpenSettings}
-            aria-label="Configuración"
-            className="p-2 -mr-2 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
-          >
-            <Settings size={20} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onOpenSettings?.('tarjetas')}
+              aria-label="Configurar tarjetas"
+              className="p-2 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
+            >
+              <Settings size={20} />
+            </button>
+            {onOpenProfile && (
+              <button
+                onClick={onOpenProfile}
+                aria-label="Mi perfil"
+                className="p-2 -mr-2 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
+              >
+                <UserCircle2 size={20} />
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -301,6 +330,29 @@ function TarjetasView({ cards, expenses, recurring, categories, onOpenSettings, 
             setCurrentDate(new Date(n.getFullYear(), n.getMonth(), 1));
           }}
         />
+
+        {(onAddExpense || onImportResumen) && (
+          <div className="flex gap-2">
+            {onAddExpense && (
+              <button
+                onClick={onAddExpense}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-lime-300/10 text-lime-300 border border-lime-300/20 hover:bg-lime-300/15 transition-colors text-sm font-medium"
+              >
+                <Plus size={14} />
+                Nuevo gasto
+              </button>
+            )}
+            {onImportResumen && (
+              <button
+                onClick={onImportResumen}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 transition-colors text-sm"
+              >
+                <FileText size={14} />
+                Importar resumen
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Search bar */}
         {cards.length > 0 && (
