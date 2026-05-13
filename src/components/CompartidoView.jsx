@@ -60,7 +60,7 @@ function SetupScreen({ onCreate }) {
   return (
     <div className="min-h-screen bg-zinc-950 pb-28 flex flex-col">
       <header className="sticky top-0 z-20 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4">
-        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">Mis finanzas</div>
+        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">VUE Finanzas</div>
         <h1 className="text-2xl text-zinc-50 font-serif-display italic mt-0.5">Compartido</h1>
       </header>
 
@@ -227,7 +227,7 @@ function MigracionPendiente() {
   return (
     <div className="min-h-screen bg-zinc-950 pb-28 flex flex-col">
       <header className="sticky top-0 z-20 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4">
-        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">Mis finanzas</div>
+        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">VUE Finanzas</div>
         <h1 className="text-2xl text-zinc-50 font-serif-display italic mt-0.5">Compartido</h1>
       </header>
       <div className="flex-1 flex flex-col items-center justify-center px-5 py-12 gap-6">
@@ -309,7 +309,7 @@ function CompartidoView({ folder, members, expenses, userId, categories, tablesR
   return (
     <div className="min-h-screen bg-zinc-950 pb-28">
       <header className="sticky top-0 z-20 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4">
-        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">Mis finanzas</div>
+        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">VUE Finanzas</div>
         <div className="flex items-center justify-between mt-0.5">
           <h1 className="text-2xl text-zinc-50 font-serif-display italic">{folder.name}</h1>
           <button

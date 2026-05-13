@@ -308,7 +308,7 @@ function RecurringTab({ recurring, cards, categories, onSave }) {
       description: '',
       amount: 0,
       currency: 'ARS',
-      cardId: cards[0]?.id || '',
+      cardId: null,
       categoryId: 'suscripciones',
       dayOfMonth: 1,
       startDate: new Date().toISOString().slice(0, 10),
@@ -327,7 +327,7 @@ function RecurringTab({ recurring, cards, categories, onSave }) {
         editing.currency === 'USD'
           ? parseFloat(editing.exchangeRate) || 1
           : null,
-      cardId: editing.cardId,
+      cardId: editing.cardId || null,
       categoryId: editing.categoryId,
       dayOfMonth: editing.dayOfMonth,
       startDate: editing.startDate,
@@ -389,7 +389,7 @@ function RecurringTab({ recurring, cards, categories, onSave }) {
                       className="inline-block w-1.5 h-1.5 rounded-full"
                       style={{ background: card?.color || '#52525b' }}
                     ></span>
-                    <span>{card?.name}</span>
+                    <span>{card?.name || 'Sin tarjeta'}</span>
                     <span>·</span>
                     <span>día {r.dayOfMonth}</span>
                   </div>

@@ -46,7 +46,7 @@ export default function OnboardingWizard({ onCreateCard, onDismiss }) {
         {step === 0 && (
           <div className="text-center">
             <div className="text-4xl mb-4">👋</div>
-            <h2 className="text-xl font-semibold text-zinc-100 mb-2">¡Bienvenido a Mis Finanzas!</h2>
+            <h2 className="text-xl font-semibold text-zinc-100 mb-2">¡Bienvenido a VUE Finanzas!</h2>
             <p className="text-zinc-400 text-sm mb-8">
               Controlá tus gastos en tarjeta, cuotas y suscripciones en un solo lugar. Te guiamos en los primeros pasos.
             </p>

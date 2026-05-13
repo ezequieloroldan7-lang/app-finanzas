@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Plus, Trash2, Search, X } from 'lucide-react';
+import { Plus, Trash2, Search, X, UserCircle2 } from 'lucide-react';
 import { formatARS, convertToARS } from '../lib/formatters';
 import { useMonthNavigation } from '../hooks/useMonthNavigation';
+import { MONTH_NAMES_SHORT } from '../constants';
 import MonthSwitcher from './MonthSwitcher';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, Cell } from 'recharts';
 
-function IngresoView({ income, incomeCategories, onAdd, onDelete, currentDate: currentDateProp = null, onDateChange }) {
+function IngresoView({ income, incomeCategories, onAdd, onDelete, onOpenProfile, currentDate: currentDateProp = null, onDateChange }) {
   const localNav = useMonthNavigation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [chartRange, setChartRange] = useState(6); // 6 or 12
 
   const year = currentDateProp ? currentDateProp.getFullYear() : localNav.year;
   const month = currentDateProp ? currentDateProp.getMonth() : localNav.month;
@@ -40,6 +43,35 @@ function IngresoView({ income, incomeCategories, onAdd, onDelete, currentDate: c
 
   const isSearching = searchQuery.trim().length > 0;
 
+  const historyData = useMemo(() => {
+    const out = [];
+    for (let i = chartRange - 1; i >= 0; i--) {
+      const d = new Date(year, month - i, 1);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const total = income.reduce((sum, e) => {
+        if (!e.date) return sum;
+        const ed = new Date(e.date + 'T12:00:00');
+        if (ed.getFullYear() !== y || ed.getMonth() !== m) return sum;
+        return sum + convertToARS(e.amount, e.currency, e.exchangeRate);
+      }, 0);
+      out.push({
+        label: MONTH_NAMES_SHORT[m] + (m === 0 ? ` ${String(y).slice(2)}` : ''),
+        total,
+        isCurrent: y === year && m === month,
+      });
+    }
+    return out;
+  }, [income, year, month, chartRange]);
+
+  const avgIncome = useMemo(() => {
+    const nonZero = historyData.filter(d => d.total > 0);
+    if (!nonZero.length) return 0;
+    return nonZero.reduce((s, d) => s + d.total, 0) / nonZero.length;
+  }, [historyData]);
+
+  const hasHistory = historyData.some(d => d.total > 0);
+
   const byCat = useMemo(() => {
     const map = {};
     for (const e of monthIncome) {
@@ -54,8 +86,21 @@ function IngresoView({ income, incomeCategories, onAdd, onDelete, currentDate: c
   return (
     <div className="min-h-screen bg-zinc-950 pb-28">
       <header className="sticky top-0 z-20 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4">
-        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">Mis finanzas</div>
-        <h1 className="text-2xl text-zinc-50 font-serif-display italic mt-0.5">Ingresos</h1>
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">VUE Finanzas</div>
+            <h1 className="text-2xl text-zinc-50 font-serif-display italic mt-0.5">Ingresos</h1>
+          </div>
+          {onOpenProfile && (
+            <button
+              onClick={onOpenProfile}
+              aria-label="Mi perfil"
+              className="p-2 -mr-2 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
+            >
+              <UserCircle2 size={20} />
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="px-5 pt-6 space-y-4">
@@ -74,6 +119,68 @@ function IngresoView({ income, incomeCategories, onAdd, onDelete, currentDate: c
             }
           }}
         />
+
+        {/* History chart */}
+        {hasHistory && (
+          <div className="bg-zinc-900 rounded-2xl px-4 py-4">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Ingresos por mes</div>
+                <div className="text-sm text-zinc-300 mt-0.5">Promedio: <span className="tabular-nums text-emerald-400">{formatARS(avgIncome)}</span></div>
+              </div>
+              <div className="flex bg-zinc-800 rounded-lg p-0.5">
+                <button
+                  onClick={() => setChartRange(6)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                    chartRange === 6 ? 'bg-emerald-400 text-zinc-950' : 'text-zinc-400'
+                  }`}
+                >
+                  6m
+                </button>
+                <button
+                  onClick={() => setChartRange(12)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                    chartRange === 12 ? 'bg-emerald-400 text-zinc-950' : 'text-zinc-400'
+                  }`}
+                >
+                  12m
+                </button>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={150}>
+              <BarChart data={historyData} margin={{ top: 6, right: 4, left: -28, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="2 4" stroke="#27272a" vertical={false} />
+                <XAxis dataKey="label" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  tick={{ fill: '#71717a', fontSize: 9 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={v => v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}
+                />
+                <Tooltip
+                  cursor={{ fill: 'rgba(63,63,70,0.3)' }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    return (
+                      <div className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 shadow-xl text-xs">
+                        <div className="text-zinc-500 mb-0.5">{label}</div>
+                        <div className="text-emerald-400 font-medium tabular-nums">{formatARS(payload[0].value)}</div>
+                      </div>
+                    );
+                  }}
+                />
+                {avgIncome > 0 && (
+                  <ReferenceLine y={avgIncome} stroke="#52525b" strokeDasharray="3 3" />
+                )}
+                <Bar dataKey="total" radius={[3, 3, 0, 0]}>
+                  {historyData.map((d, i) => (
+                    <Cell key={i} fill={d.isCurrent ? '#34d399' : '#10b98155'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
 
         {/* Summary */}
         {monthIncome.length > 0 && (

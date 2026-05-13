@@ -74,6 +74,6 @@ export async function exportToExcel({ expenses, recurring, cards, categories }) 
   XLSX.utils.book_append_sheet(wb, wsMon, 'Por mes');
 
   // ── Descargar ─────────────────────────────────────────────────────
-  const filename = `mis-finanzas-${now.toISOString().slice(0, 10)}.xlsx`;
+  const filename = `vue-finanzas-${now.toISOString().slice(0, 10)}.xlsx`;
   XLSX.writeFile(wb, filename);
 }

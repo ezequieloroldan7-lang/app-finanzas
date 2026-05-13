@@ -16,8 +16,8 @@ export default defineConfig({
       useCredentials: true,
       includeAssets: ['favicon.svg', 'icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Mis Finanzas',
-        short_name: 'Finanzas',
+        name: 'VUE Finanzas',
+        short_name: 'VUE',
         description: 'Seguimiento de gastos personales y tarjetas de crédito',
         theme_color: '#09090b',
         background_color: '#09090b',

@@ -33,7 +33,7 @@ self.addEventListener('push', event => {
   if (!event.data) return;
   let data;
   try { data = event.data.json(); } catch { return; }
-  const { title = 'Mis Finanzas', body = '', icon = '/icon-192.png' } = data;
+  const { title = 'VUE Finanzas', body = '', icon = '/icon-192.png' } = data;
   event.waitUntil(
     self.registration.showNotification(title, {
       body,

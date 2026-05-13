@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Upload, Trash2, Download, FileText, File, Loader2, Sparkles, Plus } from 'lucide-react';
+import { Upload, Trash2, Download, FileText, File, Loader2, Sparkles, Plus, UserCircle2 } from 'lucide-react';
 import { MONTH_NAMES } from '../constants';
 import { recognizeResumen, recognizeFactura } from '../lib/recognizeResumen';
 
@@ -8,7 +8,7 @@ const TYPE_LABELS = {
   factura: { label: 'Facturas', emoji: '📄' },
 };
 
-function ArchivosView({ files, cards, onUpload, onDelete, onDownload, onOpenImport, onAddExpense }) {
+function ArchivosView({ files, cards, onUpload, onDelete, onDownload, onOpenImport, onAddExpense, onOpenProfile }) {
   const [section, setSection] = useState('resumen');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -27,9 +27,13 @@ function ArchivosView({ files, cards, onUpload, onDelete, onDownload, onOpenImpo
     e.target.value = '';
     setPendingFile(file);
     setScanError('');
-    const baseName = file.name.replace(/\.pdf$/i, '');
+    setUploadError('');
+    const baseName = file.name.replace(/\.(pdf|jpe?g|png|webp)$/i, '');
     setMeta({ name: baseName, month: '', cardId: '', amount: '', notes: '', date: new Date().toISOString().slice(0, 10) });
     setShowMetaModal(true);
+
+    // Auto-scan only PDFs (recognizers are PDF-text based).
+    if (file.type !== 'application/pdf') return;
 
     setRecognizing(true);
     try {
@@ -80,14 +84,7 @@ function ArchivosView({ files, cards, onUpload, onDelete, onDownload, onOpenImpo
         notes: section === 'factura' && meta.date ? `date:${meta.date}` : (meta.notes || null),
       });
     } catch (err) {
-      const msg = err?.message || 'Error al subir el archivo';
-      if (msg.includes('Bucket not found') || msg.includes('storage')) {
-        setUploadError('El almacenamiento no está configurado. Creá el bucket "user-files" en Supabase Storage.');
-      } else if (msg.includes('relation') || msg.includes('does not exist')) {
-        setUploadError('La tabla "files" no existe. Ejecutá las migraciones SQL en Supabase.');
-      } else {
-        setUploadError(msg);
-      }
+      setUploadError(err?.message || 'Error al subir el archivo');
     } finally {
       setUploading(false);
       setPendingFile(null);
@@ -119,8 +116,21 @@ function ArchivosView({ files, cards, onUpload, onDelete, onDownload, onOpenImpo
   return (
     <div className="min-h-screen bg-zinc-950 pb-28">
       <header className="sticky top-0 z-20 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4">
-        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">Mis finanzas</div>
-        <h1 className="text-2xl text-zinc-50 font-serif-display italic mt-0.5">Archivos</h1>
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">VUE Finanzas</div>
+            <h1 className="text-2xl text-zinc-50 font-serif-display italic mt-0.5">Archivos</h1>
+          </div>
+          {onOpenProfile && (
+            <button
+              onClick={onOpenProfile}
+              aria-label="Mi perfil"
+              className="p-2 -mr-2 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
+            >
+              <UserCircle2 size={20} />
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="px-5 pt-5 space-y-4">
@@ -156,10 +166,16 @@ function ArchivosView({ files, cards, onUpload, onDelete, onDownload, onOpenImpo
           {uploading ? (
             <><Loader2 size={16} className="animate-spin" /> Subiendo…</>
           ) : (
-            <><Upload size={16} /> Subir PDF</>
+            <><Upload size={16} /> Subir archivo (PDF o imagen)</>
           )}
         </button>
-        <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileChange} />
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/pdf,image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFileChange}
+        />
 
         {filteredFiles.length === 0 ? (
           <div className="text-center py-16">

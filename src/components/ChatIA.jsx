@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, UserCircle2 } from 'lucide-react';
 import { buildFinancialContext, sendChatMessage } from '../lib/ai';
 import { fetchRates } from '../lib/cotizacion';
 
@@ -12,7 +12,7 @@ const SUGGESTIONS = [
   '¿Mis gastos recurrentes son razonables?',
 ];
 
-function ChatIA({ expenses, cards, categories, recurring, budget, savingsGoal }) {
+function ChatIA({ expenses, cards, categories, recurring, budget, savingsGoal, onOpenProfile }) {
   const [rates, setRates] = useState(null);
   const [messages, setMessages] = useState([{ role: 'assistant', text: WELCOME }]);
   const [input, setInput] = useState('');
@@ -77,8 +77,21 @@ function ChatIA({ expenses, cards, categories, recurring, budget, savingsGoal })
   return (
     <div className="flex flex-col bg-zinc-950" style={{ height: 'calc(100dvh - 52px)' }}>
       <header className="shrink-0 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4">
-        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">Mis finanzas</div>
-        <h1 className="text-2xl text-zinc-50 font-serif-display mt-0.5">Asistente IA</h1>
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">VUE Finanzas</div>
+            <h1 className="text-2xl text-zinc-50 font-serif-display mt-0.5">Asistente IA</h1>
+          </div>
+          {onOpenProfile && (
+            <button
+              onClick={onOpenProfile}
+              aria-label="Mi perfil"
+              className="p-2 -mr-2 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
+            >
+              <UserCircle2 size={20} />
+            </button>
+          )}
+        </div>
       </header>
 
       {lastError && (
