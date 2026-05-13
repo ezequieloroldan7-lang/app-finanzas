@@ -68,7 +68,7 @@ export function useFiles(userId) {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       throw new Error('No hay conexión a internet. Intentá de nuevo cuando vuelvas online.');
     }
-    // Derive a safe extension; fall back to MIME map if filename lacks one.
+
     const dotIdx = file.name.lastIndexOf('.');
     let ext = dotIdx > -1 ? file.name.slice(dotIdx + 1).toLowerCase() : '';
     if (!ext || ext.length > 5) {
@@ -79,80 +79,51 @@ export function useFiles(userId) {
     }
     const path = `${userId}/${Date.now()}.${ext}`;
 
-    // Wrap the call: supabase-js usually returns { error }, but network-level
-    // failures (CORS, offline, blocked) are thrown as raw TypeError("Failed to fetch").
-    let uploadErr = null;
+    // Obtener el JWT de la sesión actual
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Sesión expirada. Volvé a iniciar sesión.');
+
+    // Subir via proxy del servidor (evita problemas de CORS con Supabase Storage)
+    let resp;
     try {
-      const res = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, { contentType: file.type, upsert: false });
-      uploadErr = res.error;
-    } catch (e) {
-      uploadErr = e;
-    }
-    if (uploadErr) {
-      console.error('uploadFile storage:', uploadErr);
-      const msg = uploadErr.message || String(uploadErr);
-      if (/failed to fetch|networkerror|load failed/i.test(msg)) {
-        throw new Error(
-          'No se pudo conectar con Supabase Storage. Suele pasar cuando: ' +
-          '1) el bucket "user-files" no existe; ' +
-          '2) el bucket no tiene CORS habilitado para este dominio; ' +
-          '3) tu red bloquea el upload. Revisá Storage en tu proyecto de Supabase.'
-        );
-      }
-      if (/bucket not found/i.test(msg)) {
-        throw new Error('Bucket "user-files" no existe en Supabase Storage. Creálo y agregale políticas RLS.');
-      }
-      if (/duplicate|already exists/i.test(msg)) {
-        throw new Error('Ya existe un archivo con ese nombre. Probá de nuevo.');
-      }
-      if (/permission|policy|violates|unauthorized|401|403/i.test(msg)) {
-        throw new Error('Sin permisos en Storage. Verificá las políticas RLS del bucket "user-files".');
-      }
-      if (/payload too large|413/i.test(msg)) {
-        throw new Error('El archivo supera el límite del bucket. Reducí el tamaño o subí el límite en Supabase.');
-      }
-      throw new Error('No se pudo subir el archivo: ' + msg);
+      resp = await fetch('/api/upload-file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': file.type,
+          'Authorization': `Bearer ${session.access_token}`,
+          'X-File-Path': path,
+          'X-File-Type': file.type,
+          'X-Metadata': JSON.stringify({
+            type,
+            name: metadata.name || file.name,
+            month: metadata.month || null,
+            cardId: metadata.cardId || null,
+            amount: metadata.amount || null,
+            notes: metadata.notes || null,
+          }),
+        },
+        body: file,
+      });
+    } catch (fetchErr) {
+      console.error('uploadFile proxy error:', fetchErr);
+      throw new Error('Error de red al subir el archivo. Verificá tu conexión e intentá de nuevo.');
     }
 
-    const row = {
-      user_id: userId,
-      type,
-      name: metadata.name || file.name,
-      storage_path: path,
-      month: metadata.month || null,
-      card_id: metadata.cardId || null,
-      amount: metadata.amount || null,
-      notes: metadata.notes || null,
-    };
-    let dbErr = null;
-    let data = null;
-    try {
-      const res = await supabase.from('files').insert(row).select().single();
-      dbErr = res.error;
-      data = res.data;
-    } catch (e) {
-      dbErr = e;
+    if (!resp.ok) {
+      let errMsg = `Error ${resp.status} al subir el archivo`;
+      try {
+        const errData = await resp.json();
+        errMsg = errData.error || errMsg;
+      } catch {}
+      if (resp.status === 413) {
+        errMsg = 'El archivo es demasiado grande. Intentá con un archivo más pequeño (máx. ~4 MB via servidor).';
+      }
+      throw new Error(errMsg);
     }
-    if (dbErr) {
-      console.error('uploadFile db:', dbErr);
-      // Cleanup storage object so we don't leave orphans behind
-      try { await supabase.storage.from(BUCKET).remove([path]); } catch {}
-      const msg = dbErr.message || String(dbErr);
-      if (/failed to fetch|networkerror|load failed/i.test(msg)) {
-        throw new Error('Se subió el archivo pero falló el guardado en la base. Revisá tu conexión e intentá de nuevo.');
-      }
-      if (/relation .* does not exist|files.*does not exist/i.test(msg)) {
-        throw new Error('La tabla "files" no existe en Supabase. Ejecutá las migraciones SQL.');
-      }
-      if (/permission|policy|violates row-level/i.test(msg)) {
-        throw new Error('Sin permisos para guardar el archivo. Revisá las políticas RLS de la tabla "files".');
-      }
-      throw new Error('No se pudo registrar el archivo: ' + msg);
-    }
+
+    const data = await resp.json();
     const newFile = fromDb(data);
-    setFiles(prev => [newFile, ...prev]);
+    setFiles(prev => prev.some(f => f.id === newFile.id) ? prev : [newFile, ...prev]);
     return newFile;
   }
 
