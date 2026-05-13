@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Plus, Settings, ChevronDown, ChevronUp, Search, X } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Plus, Settings, ChevronDown, ChevronUp, Search, X, Pencil, Check } from 'lucide-react';
 import { getAdjustedClosingDate } from '../lib/cuotas';
 import { formatARS, monthKey } from '../lib/formatters';
 import { getCuotasForMonth, getMonthlyTotals, getMoMByCategory } from '../lib/aggregations';
@@ -24,13 +24,40 @@ function getNextClosingDate(card) {
   return getAdjustedClosingDate(next.getFullYear(), next.getMonth(), card.closingDay, card.closingDates || {});
 }
 
-function CardTile({ card, monthTotal, cuotasCount, cuotas, expenses, recurring, cards, categories, onEdit, onEditExpense, onDeleteExpense }) {
+function CardTile({ card, monthTotal, cuotasCount, cuotas, expenses, recurring, cards, categories, viewYear, viewMonth, onEdit, onEditExpense, onDeleteExpense, onSaveCard }) {
   const nextClosing = getNextClosingDate(card);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const daysUntil = Math.ceil((nextClosing - today) / (1000 * 60 * 60 * 24));
   const closingStr = nextClosing.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
   const [expanded, setExpanded] = useState(false);
+
+  // Quick closing-date override for the viewed month
+  const viewKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+  const autoDay = getAdjustedClosingDate(viewYear, viewMonth, card.closingDay, {}).getDate();
+  const currentOverride = card.closingDates?.[viewKey];
+  const [editingClosing, setEditingClosing] = useState(false);
+  const [closingInput, setClosingInput] = useState('');
+  const closingInputRef = useRef(null);
+
+  function openClosingEdit() {
+    setClosingInput(currentOverride ? String(currentOverride) : '');
+    setEditingClosing(true);
+    setTimeout(() => closingInputRef.current?.focus(), 50);
+  }
+
+  function saveClosingOverride() {
+    const val = closingInput.trim();
+    const newDates = { ...(card.closingDates || {}) };
+    if (!val) {
+      delete newDates[viewKey];
+    } else {
+      const day = Math.min(31, Math.max(1, parseInt(val) || autoDay));
+      newDates[viewKey] = day;
+    }
+    onSaveCard?.({ ...card, closingDates: newDates });
+    setEditingClosing(false);
+  }
 
   const todayFull = new Date();
   const currentYear = todayFull.getFullYear();
@@ -87,12 +114,70 @@ function CardTile({ card, monthTotal, cuotasCount, cuotas, expenses, recurring, 
             {cuotasCount} {cuotasCount === 1 ? 'pago' : 'pagos'}
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-right relative">
           <div className="text-[10px] uppercase tracking-[0.15em] text-zinc-600">Próx. cierre</div>
-          <div className="text-sm font-medium text-zinc-300 mt-0.5">{closingStr}</div>
+          <div className="flex items-center justify-end gap-1.5 mt-0.5">
+            <div className="text-sm font-medium text-zinc-300">{closingStr}</div>
+            {onSaveCard && (
+              <button
+                onClick={openClosingEdit}
+                aria-label="Editar cierre del mes"
+                className="text-zinc-600 hover:text-zinc-400 transition-colors"
+              >
+                <Pencil size={11} />
+              </button>
+            )}
+          </div>
           <div className={`text-xs mt-0.5 ${daysUntil <= 3 ? 'text-amber-400' : 'text-zinc-600'}`}>
             {daysUntil === 0 ? '¡Hoy!' : daysUntil === 1 ? 'Mañana' : `en ${daysUntil} días`}
           </div>
+
+          {/* Inline closing-date editor for the viewed month */}
+          {editingClosing && (
+            <div
+              className="absolute right-0 top-full mt-2 bg-zinc-900 border border-zinc-700 rounded-2xl p-3 z-20 shadow-2xl min-w-[160px]"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="text-[10px] text-zinc-500 mb-2">
+                Cierre {MONTH_NAMES_SHORT[viewMonth]} {viewYear}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={closingInputRef}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={closingInput}
+                  onChange={e => setClosingInput(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={e => { if (e.key === 'Enter') saveClosingOverride(); if (e.key === 'Escape') setEditingClosing(false); }}
+                  placeholder={String(autoDay)}
+                  className="w-12 text-center bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-zinc-100 outline-none focus:border-lime-400/60"
+                />
+                <button
+                  onClick={saveClosingOverride}
+                  className="p-1.5 rounded-lg bg-lime-300/10 text-lime-300 hover:bg-lime-300/20 transition-colors"
+                  aria-label="Guardar"
+                >
+                  <Check size={13} />
+                </button>
+                <button
+                  onClick={() => setEditingClosing(false)}
+                  className="p-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+                  aria-label="Cancelar"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+              {currentOverride && (
+                <button
+                  onClick={() => { setClosingInput(''); saveClosingOverride(); }}
+                  className="mt-2 text-[10px] text-red-500/70 hover:text-red-400 transition-colors w-full text-left"
+                >
+                  Quitar override
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -157,20 +242,11 @@ function CardTile({ card, monthTotal, cuotasCount, cuotas, expenses, recurring, 
         </div>
       )}
 
-      {/* Decorative circle */}
-      <div
-        className="absolute bottom-0 right-0 w-36 h-36 rounded-full opacity-[0.06] translate-x-12 translate-y-12 pointer-events-none"
-        style={{ background: card.color }}
-      />
-      <div
-        className="absolute top-5 right-14 w-3 h-3 rounded-full opacity-60"
-        style={{ background: card.color }}
-      />
     </div>
   );
 }
 
-function TarjetasView({ cards, expenses, recurring, categories, onOpenSettings, onEditExpense, onDeleteExpense, currentDate: currentDateProp = null, onDateChange }) {
+function TarjetasView({ cards, expenses, recurring, categories, onOpenSettings, onEditExpense, onDeleteExpense, onSaveCard, currentDate: currentDateProp = null, onDateChange }) {
   const todayInit = new Date();
   const [localDate, setLocalDate] = useState(
     () => new Date(todayInit.getFullYear(), todayInit.getMonth(), 1)
@@ -315,9 +391,12 @@ function TarjetasView({ cards, expenses, recurring, categories, onOpenSettings, 
                       recurring={recurring}
                       cards={cards}
                       categories={categories}
+                      viewYear={year}
+                      viewMonth={month}
                       onEdit={onOpenSettings}
                       onEditExpense={onEditExpense}
                       onDeleteExpense={onDeleteExpense}
+                      onSaveCard={onSaveCard}
                     />
                   );
                 })}

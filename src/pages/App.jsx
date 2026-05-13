@@ -631,6 +631,9 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             setShowAdd(true);
           }}
           onDeleteExpense={handleDeleteExpense}
+          onSaveCard={async (updatedCard) => {
+            await saveCards(cards.map(c => c.id === updatedCard.id ? updatedCard : c));
+          }}
           currentDate={currentDate}
           onDateChange={setCurrentDate}
         />
