@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { Plus, Trash2, Heart, User, Mail, Pencil, X, Check, UserMinus, ArrowLeftRight, Search, SlidersHorizontal, ImageIcon, PiggyBank, Target, ChevronDown, ChevronUp, UserCircle2, Repeat, Upload } from 'lucide-react';
+import { Plus, Trash2, Heart, User, Mail, Pencil, X, Check, UserMinus, ArrowLeftRight, Search, SlidersHorizontal, ImageIcon, PiggyBank, Target, ChevronDown, ChevronUp, UserCircle2, Repeat } from 'lucide-react';
 import RecurringEditModal from './RecurringEditModal';
 import { uid } from '../lib/formatters';
 import MonthSwitcher from './MonthSwitcher';
@@ -9,7 +9,7 @@ import SharedBalanceChart from './SharedBalanceChart';
 import { MONTH_NAMES_SHORT } from '../constants';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, Cell } from 'recharts';
 
-function GastosView({ expenses, sharedExpenses: sharedExpensesProp = [], categories, recurring = [], cards = [], onSaveRecurring, onOpenProfile, onImportResumen, userId, sharedFolderId, partnerName, partnerMember, partnerInvite, receivedPendingInvites = [], onAcceptInvite, onRejectInvite, onAdd, onAddShared, onDelete, onDeleteShared, onEditShared, onEditPersonal, onCreateFolder, onInvite, onRemovePartner, onRenamePartner, onSettleDebt, onGetReceiptUrl, currentDate: currentDateProp = null, onDateChange }) {
+function GastosView({ expenses, sharedExpenses: sharedExpensesProp = [], categories, recurring = [], cards = [], onSaveRecurring, onOpenProfile, userId, sharedFolderId, partnerName, partnerMember, partnerInvite, receivedPendingInvites = [], onAcceptInvite, onRejectInvite, onAdd, onAddShared, onDelete, onDeleteShared, onEditShared, onEditPersonal, onCreateFolder, onInvite, onRemovePartner, onRenamePartner, onSettleDebt, onGetReceiptUrl, currentDate: currentDateProp = null, onDateChange }) {
   const localNav = useMonthNavigation();
   const year = currentDateProp ? currentDateProp.getFullYear() : localNav.year;
   const month = currentDateProp ? currentDateProp.getMonth() : localNav.month;
@@ -359,24 +359,13 @@ function GastosView({ expenses, sharedExpenses: sharedExpensesProp = [], categor
         />
 
         {section === 'personal' && (
-          <div className="flex gap-2">
-            <button
-              onClick={onAdd}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-lime-300/10 text-lime-300 border border-lime-300/20 hover:bg-lime-300/15 transition-colors text-sm font-medium"
-            >
-              <Plus size={14} />
-              Nuevo gasto
-            </button>
-            {onImportResumen && (
-              <button
-                onClick={onImportResumen}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 transition-colors text-sm"
-              >
-                <Upload size={14} />
-                Importar resumen
-              </button>
-            )}
-          </div>
+          <button
+            onClick={onAdd}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-lime-300/10 text-lime-300 border border-lime-300/20 hover:bg-lime-300/15 transition-colors text-sm font-medium"
+          >
+            <Plus size={14} />
+            Nuevo gasto
+          </button>
         )}
 
         {/* Search + filters */}

@@ -680,7 +680,6 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             }}
             onAdd={() => { setEditing(null); setAddNoCard(true); setAddShared(false); setShowAdd(true); }}
             onAddShared={() => { setEditing(null); setAddNoCard(true); setAddShared(true); setShowAdd(true); }}
-            onImportResumen={() => setShowImport(true)}
             onEditShared={(exp) => { setEditing(exp); setAddNoCard(true); setAddShared(true); setShowAdd(true); }}
             onEditPersonal={(exp) => { setEditing(exp); setAddNoCard(true); setAddShared(false); setShowAdd(true); }}
             onDelete={handleDeleteExpense}
