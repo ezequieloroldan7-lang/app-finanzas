@@ -145,7 +145,13 @@ function Dashboard({ userId, userEmail, onSignOut }) {
     setInstallPrompt(null);
   };
 
-  const [activeTab, setActiveTab] = useState('inicio');
+  const [activeTab, setActiveTab] = useState(() => {
+    try { return localStorage.getItem('vue_active_tab') || 'inicio'; } catch { return 'inicio'; }
+  });
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    try { localStorage.setItem('vue_active_tab', tab); } catch {}
+  };
   const [currentDate, setCurrentDate] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -659,6 +665,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
           <GastosView
             expenses={expenses}
             sharedExpenses={sharedExpenses}
+            sharedExpLoading={sharedExpLoading}
             categories={categories}
             recurring={recurring}
             cards={cards}
@@ -745,7 +752,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
         />
       )}
 
-      <BottomNav active={activeTab} onChange={setActiveTab} />
+      <BottomNav active={activeTab} onChange={handleTabChange} />
 
       {showProfile && (
         <ProfileModal

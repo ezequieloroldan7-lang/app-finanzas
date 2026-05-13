@@ -9,7 +9,7 @@ import SharedBalanceChart from './SharedBalanceChart';
 import { MONTH_NAMES_SHORT } from '../constants';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, Cell } from 'recharts';
 
-function GastosView({ expenses, sharedExpenses: sharedExpensesProp = [], categories, recurring = [], cards = [], onSaveRecurring, onOpenProfile, userId, sharedFolderId, partnerName, partnerMember, partnerInvite, receivedPendingInvites = [], onAcceptInvite, onRejectInvite, onAdd, onAddShared, onDelete, onDeleteShared, onEditShared, onEditPersonal, onCreateFolder, onInvite, onRemovePartner, onRenamePartner, onSettleDebt, onGetReceiptUrl, currentDate: currentDateProp = null, onDateChange }) {
+function GastosView({ expenses, sharedExpenses: sharedExpensesProp = [], sharedExpLoading = false, categories, recurring = [], cards = [], onSaveRecurring, onOpenProfile, userId, sharedFolderId, partnerName, partnerMember, partnerInvite, receivedPendingInvites = [], onAcceptInvite, onRejectInvite, onAdd, onAddShared, onDelete, onDeleteShared, onEditShared, onEditPersonal, onCreateFolder, onInvite, onRemovePartner, onRenamePartner, onSettleDebt, onGetReceiptUrl, currentDate: currentDateProp = null, onDateChange }) {
   const localNav = useMonthNavigation();
   const year = currentDateProp ? currentDateProp.getFullYear() : localNav.year;
   const month = currentDateProp ? currentDateProp.getMonth() : localNav.month;
@@ -99,6 +99,15 @@ function GastosView({ expenses, sharedExpenses: sharedExpensesProp = [], categor
   const [showAllMe, setShowAllMe] = useState(false);
   const [showAllPartner, setShowAllPartner] = useState(false);
   const [confirmDeleteGoal, setConfirmDeleteGoal] = useState(false);
+
+  // Reload savings data when sharedFolderId becomes available (e.g. after async load)
+  useEffect(() => {
+    if (!sharedFolderId) return;
+    try {
+      const raw = localStorage.getItem(`pareja_ahorro_${sharedFolderId}`);
+      if (raw) setAhorroData(JSON.parse(raw));
+    } catch {}
+  }, [sharedFolderId]);
 
   useEffect(() => {
     if (!sharedFolderId) return;
@@ -333,14 +342,29 @@ function GastosView({ expenses, sharedExpenses: sharedExpensesProp = [], categor
           </button>
           <button
             onClick={() => setSection('pareja')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all ${
+            className={`relative flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all ${
               section === 'pareja' ? 'bg-violet-400 text-zinc-950' : 'text-zinc-500 hover:text-zinc-300'
             }`}
           >
             <Heart size={14} />
             En pareja
+            {receivedPendingInvites.length > 0 && (
+              <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-violet-400 ring-2 ring-zinc-900 animate-pulse" />
+            )}
           </button>
         </div>
+
+        {/* Pending invite banner — visible regardless of active section */}
+        {receivedPendingInvites.length > 0 && section !== 'pareja' && (
+          <button
+            onClick={() => setSection('pareja')}
+            className="w-full flex items-center gap-3 bg-violet-950/40 border border-violet-800/50 rounded-2xl px-4 py-3 text-left hover:bg-violet-950/60 transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-violet-400 shrink-0 animate-pulse" />
+            <span className="text-sm text-violet-300 flex-1">Tenés una invitación de pareja pendiente</span>
+            <span className="text-xs text-violet-500">Ver →</span>
+          </button>
+        )}
 
         {/* Month switcher */}
         <MonthSwitcher
@@ -1116,7 +1140,12 @@ function GastosView({ expenses, sharedExpenses: sharedExpensesProp = [], categor
         )}
 
         {/* Expense list */}
-        {!(section === 'pareja' && !sharedFolderId) && !(section === 'pareja' && coupleTab === 'ahorro') && (filteredExpenses.length === 0 ? (
+        {!(section === 'pareja' && !sharedFolderId) && !(section === 'pareja' && coupleTab === 'ahorro') && (
+          section === 'pareja' && sharedExpLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-5 h-5 border-2 border-zinc-700 border-t-violet-400 rounded-full animate-spin" />
+          </div>
+        ) : filteredExpenses.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-zinc-500 mb-1">
               {hasFilters ? 'Sin resultados para ese filtro' : section === 'pareja' ? 'No hay gastos en pareja este mes' : 'No hay gastos este mes'}

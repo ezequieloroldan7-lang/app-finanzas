@@ -14,6 +14,13 @@ function inviteFromDb(row) {
   return { id: row.id, folderId: row.folder_id, invitedEmail: row.invited_email, invitedBy: row.invited_by };
 }
 
+function formatDisplayName(email) {
+  return email.split('@')[0]
+    .replace(/[._-]+/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim() || email.split('@')[0];
+}
+
 async function safeQuery(queryFn) {
   try {
     const { data } = await queryFn();
@@ -161,7 +168,7 @@ export function useSharedFolders(userId, userEmail, onPartnerJoined) {
     if (folderErr) throw folderErr;
     const { error: memberErr } = await supabase.from('shared_folder_members').insert({
       folder_id: folderId, user_id: userId, email: userEmail,
-      display_name: userEmail.split('@')[0], role: 'owner',
+      display_name: formatDisplayName(userEmail), role: 'owner',
     });
     if (memberErr) throw memberErr;
     const newFolder = { id: folderId, name, createdBy: userId };
@@ -216,9 +223,12 @@ export function useSharedFolders(userId, userEmail, onPartnerJoined) {
         folder_id: invite.folderId,
         user_id: userId,
         email: userEmail,
-        display_name: userEmail.split('@')[0],
+        display_name: formatDisplayName(userEmail),
         role: 'member',
       });
+      // Delete the invite row so the inviter's realtime subscription fires
+      // and they see the partner as "Activo" instead of "Pendiente".
+      await supabase.from('shared_folder_invites').delete().eq('id', invite.id);
       setPendingReceivedInvites(prev => prev.filter(i => i.id !== invite.id));
       await load();
     } catch (e) {

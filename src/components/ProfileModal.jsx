@@ -28,9 +28,14 @@ export default function ProfileModal({ userId, userEmail, onClose, onSignOut, on
       if (!data?.user) return;
       const meta = data.user.user_metadata || {};
       setDisplayName(meta.full_name || meta.name || '');
-      setPhotoPreview(meta.avatar_url || null);
+      // Auth metadata is the primary source; localStorage is a fallback for
+      // sessions where the Supabase update succeeded but auth state is stale.
+      const photo = meta.avatar_url
+        || ((() => { try { return localStorage.getItem(`avatar_${userId}`); } catch { return null; } })())
+        || null;
+      setPhotoPreview(photo);
     });
-  }, []);
+  }, [userId]);
 
   // Resize image to max 256x256 and return data URL — keeps user_metadata small.
   const resizeToDataURL = (file, maxSize = 256, quality = 0.85) =>
@@ -102,7 +107,10 @@ export default function ProfileModal({ userId, userEmail, onClose, onSignOut, on
 
       const { error: updateErr } = await supabase.auth.updateUser({ data: metaUpdate });
       if (updateErr) throw updateErr;
-      if (avatarUrl) setPhotoPreview(avatarUrl);
+      if (avatarUrl) {
+        setPhotoPreview(avatarUrl);
+        try { localStorage.setItem(`avatar_${userId}`, avatarUrl); } catch {}
+      }
 
       try {
         localStorage.setItem(`pref_currency_${userId}`, preferredCurrency);
@@ -159,8 +167,9 @@ export default function ProfileModal({ userId, userEmail, onClose, onSignOut, on
               {photoPreview ? (
                 <img
                   src={photoPreview}
-                  alt="Foto de perfil"
+                  alt=""
                   className="w-24 h-24 rounded-full object-cover ring-2 ring-zinc-700 group-hover:ring-violet-500 transition-all"
+                  onError={() => setPhotoPreview(null)}
                 />
               ) : (
                 <div className="w-24 h-24 rounded-full bg-zinc-800 ring-2 ring-zinc-700 group-hover:ring-violet-500 flex items-center justify-center text-3xl font-medium text-zinc-300 transition-all">
