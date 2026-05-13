@@ -16,7 +16,12 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   if (!SUPABASE_URL || !SERVICE_KEY) {
-    return res.status(500).json({ error: 'Servidor no configurado (faltan SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY)' });
+    const missing = [];
+    if (!SUPABASE_URL) missing.push('SUPABASE_URL (o VITE_SUPABASE_URL)');
+    if (!SERVICE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+    return res.status(500).json({
+      error: `Falta configurar en Vercel: ${missing.join(', ')}. Agregá la(s) variable(s) en Vercel → Settings → Environment Variables y redeployá.`,
+    });
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
