@@ -101,5 +101,5 @@ export function useSharedExpenses(folderId, userId, onPartnerExpense) {
     setExpenses(prev => prev.filter(e => e.id !== id));
   }
 
-  return { expenses, loading, upsertExpense, deleteExpense };
+  return { expenses, loading, upsertExpense, deleteExpense, reload: load };
 }
