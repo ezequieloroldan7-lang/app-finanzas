@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { Plus, Settings, ChevronDown, ChevronUp, Search, X, Pencil, Check, UserCircle2, FileText } from 'lucide-react';
 import { getAdjustedClosingDate } from '../lib/cuotas';
-import { formatARS, monthKey } from '../lib/formatters';
+import { formatARS, formatUSD, monthKey } from '../lib/formatters';
 import { getCuotasForMonth, getMonthlyTotals, getMoMByCategory } from '../lib/aggregations';
 import { MONTH_NAMES_SHORT } from '../constants';
 import CardComparisonChart from './CardComparisonChart';
@@ -24,7 +24,7 @@ function getNextClosingDate(card) {
   return getAdjustedClosingDate(next.getFullYear(), next.getMonth(), card.closingDay, card.closingDates || {});
 }
 
-function CardTile({ card, monthTotal, cuotasCount, cuotas, expenses, recurring, cards, categories, viewYear, viewMonth, onEdit, onEditExpense, onDeleteExpense, onSaveCard }) {
+function CardTile({ card, monthTotal, usdTotal, cuotasCount, cuotas, expenses, recurring, cards, categories, viewYear, viewMonth, onEdit, onEditExpense, onDeleteExpense, onSaveCard }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayY = today.getFullYear();
@@ -122,6 +122,11 @@ function CardTile({ card, monthTotal, cuotasCount, cuotas, expenses, recurring, 
           <div className="text-2xl font-serif-display text-zinc-100 tabular-nums mt-0.5">
             {formatARS(monthTotal)}
           </div>
+          {usdTotal > 0 && (
+            <div className="text-xs text-emerald-400/80 tabular-nums mt-0.5">
+              {formatUSD(usdTotal)}
+            </div>
+          )}
           <div className="text-xs text-zinc-600 mt-0.5">
             {cuotasCount} {cuotasCount === 1 ? 'pago' : 'pagos'}
           </div>
@@ -217,6 +222,7 @@ function CardTile({ card, monthTotal, cuotasCount, cuotas, expenses, recurring, 
             cards={cards}
             onEdit={onEditExpense || (() => {})}
             onDelete={onDeleteExpense || (() => {})}
+            defaultGrouped
           />
 
           {historyData.length > 0 && (
@@ -291,6 +297,8 @@ function TarjetasView({ cards, expenses, recurring, categories, onOpenSettings, 
 
   const isSearching = searchQuery.trim().length > 0;
   const totalMes = allCuotas.reduce((s, c) => s + c.cuota.amount, 0);
+  const totalUSD = allCuotas.reduce((s, c) =>
+    c.expense.currency === 'USD' ? s + c.expense.amount / c.expense.totalCuotas : s, 0);
 
   return (
     <div className="min-h-screen bg-zinc-950 pb-24">
@@ -405,6 +413,11 @@ function TarjetasView({ cards, expenses, recurring, categories, onOpenSettings, 
                 <div className="text-3xl font-serif-display text-zinc-100 tabular-nums mt-1">
                   {formatARS(totalMes)}
                 </div>
+                {totalUSD > 0 && (
+                  <div className="text-sm text-emerald-400/80 tabular-nums mt-0.5">
+                    {formatUSD(totalUSD)}
+                  </div>
+                )}
                 <div className="text-xs text-zinc-600 mt-0.5">{allCuotas.length} pago{allCuotas.length !== 1 ? 's' : ''} · {cards.length} tarjeta{cards.length !== 1 ? 's' : ''}</div>
               </div>
             )}
@@ -432,11 +445,14 @@ function TarjetasView({ cards, expenses, recurring, categories, onOpenSettings, 
                 {cards.map(card => {
                   const cardCuotas = allCuotas.filter(c => c.expense.cardId === card.id);
                   const monthTotal = cardCuotas.reduce((s, c) => s + c.cuota.amount, 0);
+                  const cardUSD = cardCuotas.reduce((s, c) =>
+                    c.expense.currency === 'USD' ? s + c.expense.amount / c.expense.totalCuotas : s, 0);
                   return (
                     <CardTile
                       key={card.id}
                       card={card}
                       monthTotal={monthTotal}
+                      usdTotal={cardUSD}
                       cuotasCount={cardCuotas.length}
                       cuotas={cardCuotas}
                       expenses={expenses}

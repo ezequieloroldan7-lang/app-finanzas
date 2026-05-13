@@ -132,8 +132,8 @@ function SwipeableExpenseItem({ expense, cuota, categories, cards, onEdit, onDel
   );
 }
 
-function ExpenseList({ cuotas, categories, cards, onEdit, onDelete }) {
-  const [grouped, setGrouped] = useState(false);
+function ExpenseList({ cuotas, categories, cards, onEdit, onDelete, defaultGrouped = false }) {
+  const [grouped, setGrouped] = useState(defaultGrouped);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
