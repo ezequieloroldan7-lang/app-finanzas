@@ -110,7 +110,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
   const { toasts, showToast, dismissToast } = useToast();
   const {
     myFolder, members: sharedMembers, invites: sharedInvites,
-    pendingReceivedInvites, loading: sharedFoldersLoading,
+    pendingReceivedInvites, customPartnerName, loading: sharedFoldersLoading,
     createFolder, inviteMember, removePartner, renamePartner,
     acceptInvite, rejectInvite,
   } = useSharedFolders(
@@ -684,7 +684,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             onOpenProfile={() => setShowProfile(true)}
             userId={userId}
             sharedFolderId={myFolder?.id || null}
-            partnerName={partnerMember?.displayName || null}
+            partnerName={customPartnerName || partnerMember?.displayName || null}
             partnerMember={partnerMember}
             partnerInvite={partnerInvite}
             receivedPendingInvites={pendingReceivedInvites}
