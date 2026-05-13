@@ -75,19 +75,19 @@ function ChatIA({ expenses, cards, categories, recurring, budget, savingsGoal })
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col">
-      <header className="sticky top-0 z-20 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4 shrink-0">
+    <div className="flex flex-col bg-zinc-950" style={{ height: 'calc(100dvh - 52px)' }}>
+      <header className="shrink-0 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4">
         <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">Mis finanzas</div>
-        <h1 className="text-2xl text-zinc-50 font-serif-display italic mt-0.5">Asistente IA</h1>
+        <h1 className="text-2xl text-zinc-50 font-serif-display mt-0.5">Asistente IA</h1>
       </header>
 
       {lastError && (
-        <div className="mx-4 mt-3 px-4 py-2.5 rounded-2xl bg-red-950/40 border border-red-900/40 text-xs text-red-400" role="alert">
+        <div className="shrink-0 mx-4 mt-3 px-4 py-2.5 rounded-2xl bg-red-950/40 border border-red-900/40 text-xs text-red-400" role="alert">
           {lastError}
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-4">
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -150,10 +150,7 @@ function ChatIA({ expenses, cards, categories, recurring, budget, savingsGoal })
         <div ref={bottomRef} />
       </div>
 
-      <div
-        className="sticky bottom-0 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-900 px-4 py-3 z-30"
-        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
-      >
+      <div className="shrink-0 bg-zinc-950 border-t border-zinc-900 px-4 py-3">
         <div className="flex gap-2 items-end">
           <textarea
             ref={textareaRef}
