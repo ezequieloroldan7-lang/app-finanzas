@@ -131,16 +131,19 @@ function ChatIA({ expenses, cards, categories, recurring, budget, savingsGoal })
         )}
 
         {messages.length === 1 && !loading && (
-          <div className="space-y-2 pt-2">
-            {SUGGESTIONS.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => send(s)}
-                className="w-full text-left px-4 py-3 rounded-2xl bg-zinc-900 border border-zinc-800 text-sm text-zinc-300 hover:border-zinc-700 hover:text-zinc-100 transition-all"
-              >
-                {s}
-              </button>
-            ))}
+          <div className="pt-2">
+            <p className="text-xs text-zinc-600 mb-2 px-1">Sugerencias rápidas</p>
+            <div className="flex flex-wrap gap-2">
+              {SUGGESTIONS.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => send(s)}
+                  className="px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:border-zinc-600 hover:text-zinc-200 transition-all"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

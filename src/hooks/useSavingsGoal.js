@@ -65,7 +65,8 @@ export function useSavingsGoal(userId) {
         }
       }
     } catch (err) {
-      console.error('useSavingsGoal load:', err);
+      // 42P01 = table doesn't exist yet (migration pending) — degrade silently
+      if (err?.code !== '42P01') console.error('useSavingsGoal load:', err);
       // Fallback to localStorage on error
       setGoalState(lsLoad());
     } finally {
