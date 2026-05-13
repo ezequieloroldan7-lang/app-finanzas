@@ -125,7 +125,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
   );
   const {
     expenses: sharedExpenses, loading: sharedExpLoading,
-    deleteExpense: deleteSharedExpense,
+    deleteExpense: deleteSharedExpense, reload: reloadSharedExpenses,
   } = useSharedExpenses(myFolder?.id, userId, (exp) => {
     const partnerMember = sharedMembers.find(m => m.userId !== userId);
     const name = partnerMember?.displayName || partnerMember?.email?.split('@')[0] || 'Tu pareja';
@@ -276,6 +276,9 @@ function Dashboard({ userId, userEmail, onSignOut }) {
       }
     }
     checkLargeExpenseNotification({ ...expData, id: expId, receiptPath }, expenses);
+    // If it's a shared expense, reload the shared list immediately so it appears
+    // without waiting for the Supabase realtime event.
+    if (addShared) reloadSharedExpenses();
     setShowAdd(false);
     setEditing(null);
     setAddNoCard(false);
