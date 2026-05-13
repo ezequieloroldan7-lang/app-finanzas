@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { supabase } from '../lib/supabase';
 import { CalendarDays, Plus, X, UserCircle2, FileText } from 'lucide-react';
 import { monthKey, uid } from '../lib/formatters';
 import { exportToExcel } from '../lib/exportExcel';
@@ -112,9 +113,16 @@ function Dashboard({ userId, userEmail, onSignOut }) {
     pendingReceivedInvites, loading: sharedFoldersLoading,
     createFolder, inviteMember, removePartner, renamePartner,
     acceptInvite, rejectInvite,
-  } = useSharedFolders(userId, userEmail, (member) => {
-    showToast(`${member.displayName || member.email.split('@')[0]} se unió a tus gastos compartidos`);
-  });
+  } = useSharedFolders(
+    userId,
+    userEmail,
+    (member) => {
+      showToast(`${member.displayName || member.email.split('@')[0]} se unió a tus gastos compartidos`);
+    },
+    () => {
+      showToast('💜 Recibiste una invitación para gastos en pareja', 'info');
+    },
+  );
   const {
     expenses: sharedExpenses, loading: sharedExpLoading,
     deleteExpense: deleteSharedExpense,
@@ -695,9 +703,13 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             onInvite={async (email) => {
               const folder = myFolder || await createFolder('Gastos en pareja');
               await inviteMember(folder.id, email);
+              const { data: { session } } = await supabase.auth.getSession();
               fetch('/api/send-invite', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+                },
                 body: JSON.stringify({ toEmail: email, inviterEmail: userEmail }),
               }).catch(() => {});
             }}
@@ -705,8 +717,6 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             onRenamePartner={renamePartner}
             onSettleDebt={handleSettleDebt}
             onGetReceiptUrl={getDownloadUrl}
-            currentDate={currentDate}
-            onDateChange={setCurrentDate}
           />
         );
       })()}
