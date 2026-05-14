@@ -35,6 +35,7 @@ export function useSharedFolders(userId, userEmail, onPartnerJoined, onInviteRec
   const [members, setMembers] = useState([]);
   const [invites, setInvites] = useState([]);
   const [pendingReceivedInvites, setPendingReceivedInvites] = useState([]);
+  const [customPartnerName, setCustomPartnerName] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tablesReady, setTablesReady] = useState(true);
   const channelRef = useRef(null);
@@ -142,6 +143,15 @@ export function useSharedFolders(userId, userEmail, onPartnerJoined, onInviteRec
 
       setFolders(allFolders);
 
+      // Load custom partner name from localStorage
+      const firstFolderId = allFolders[0]?.id;
+      if (firstFolderId) {
+        try {
+          const saved = localStorage.getItem(`partner_name_${firstFolderId}`);
+          if (saved) setCustomPartnerName(saved);
+        } catch {}
+      }
+
       // Load members
       if (allFolders.length > 0) {
         const membersData = await safeQuery(() =>
@@ -242,22 +252,14 @@ export function useSharedFolders(userId, userEmail, onPartnerJoined, onInviteRec
     setInvites(prev => prev.filter(i => !(i.folderId === folderId && i.invitedEmail === email.toLowerCase().trim())));
     setMembers(prev => prev.filter(m => !(m.folderId === folderId && m.email === email.toLowerCase().trim())));
     try { localStorage.removeItem(`partner_name_${folderId}`); } catch {}
+    setCustomPartnerName(null);
   }
 
-  async function renamePartner(memberUserIdOrEmail, newName) {
+  function renamePartner(_, newName) {
     const folderId = myFolder?.id;
     if (!folderId) return;
-    // Persist in localStorage immediately (reliable even if Supabase RLS blocks update)
     try { localStorage.setItem(`partner_name_${folderId}`, newName); } catch {}
-    // Update local state for all non-self members in this folder
-    setMembers(prev => prev.map(m =>
-      m.folderId === folderId && m.userId !== userId ? { ...m, displayName: newName } : m,
-    ));
-    // Try Supabase best-effort (may fail if RLS prevents updating another user's row)
-    try {
-      await supabase.from('shared_folder_members')
-        .update({ display_name: newName }).eq('folder_id', folderId).eq('user_id', memberUserIdOrEmail);
-    } catch { /* silent — localStorage is the fallback */ }
+    setCustomPartnerName(newName);
   }
 
   async function acceptInvite(invite) {
@@ -269,9 +271,9 @@ export function useSharedFolders(userId, userEmail, onPartnerJoined, onInviteRec
         display_name: formatDisplayName(userEmail),
         role: 'member',
       });
-      // Delete the invite row so the inviter's realtime subscription fires
-      // and they see the partner as "Activo" instead of "Pendiente".
-      await supabase.from('shared_folder_invites').delete().eq('id', invite.id);
+      // Keep the invite row — it's used as a folder discovery fallback when RLS
+      // blocks the direct shared_folders query. The pending check relies on
+      // acceptedFolderIds (member-based), so leaving the invite doesn't re-show the prompt.
       setPendingReceivedInvites(prev => prev.filter(i => i.id !== invite.id));
       await load();
     } catch (e) {
@@ -294,7 +296,7 @@ export function useSharedFolders(userId, userEmail, onPartnerJoined, onInviteRec
 
   return {
     folders, myFolder, members: folderMembers, invites: folderInvites,
-    pendingReceivedInvites, loading, tablesReady,
+    pendingReceivedInvites, customPartnerName, loading, tablesReady,
     createFolder, inviteMember, removePartner, renamePartner,
     acceptInvite, rejectInvite, reload: load,
   };

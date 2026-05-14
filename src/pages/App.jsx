@@ -110,7 +110,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
   const { toasts, showToast, dismissToast } = useToast();
   const {
     myFolder, members: sharedMembers, invites: sharedInvites,
-    pendingReceivedInvites, loading: sharedFoldersLoading,
+    pendingReceivedInvites, customPartnerName, loading: sharedFoldersLoading,
     createFolder, inviteMember, removePartner, renamePartner,
     acceptInvite, rejectInvite,
   } = useSharedFolders(
@@ -522,8 +522,9 @@ function Dashboard({ userId, userEmail, onSignOut }) {
           <header className="sticky top-0 z-20 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">VUE Finanzas</div>
-                <h1 className="text-2xl text-zinc-50 mt-0.5 font-serif-display italic">Inicio</h1>
+                <span className="font-serif italic text-zinc-100 text-xl leading-none">
+                  VUE<span className="text-lime-400">·</span>
+                </span>
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -557,6 +558,16 @@ function Dashboard({ userId, userEmail, onSignOut }) {
                   setCurrentDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
                 }
               />
+
+              {/* Greeting */}
+              <div className="space-y-0.5">
+                <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                  Buenas, {userEmail ? userEmail.split('@')[0] : 'usuario'}
+                </div>
+                <div className="font-serif italic text-[28px] leading-tight text-zinc-100">
+                  <span className="text-zinc-500">Tu plata,</span> en orden.
+                </div>
+              </div>
 
               <div className="flex gap-2">
                 <button
@@ -684,7 +695,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             onOpenProfile={() => setShowProfile(true)}
             userId={userId}
             sharedFolderId={myFolder?.id || null}
-            partnerName={partnerMember?.displayName || null}
+            partnerName={customPartnerName || partnerMember?.displayName || null}
             partnerMember={partnerMember}
             partnerInvite={partnerInvite}
             receivedPendingInvites={pendingReceivedInvites}
@@ -765,7 +776,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
         />
       )}
 
-      <BottomNav active={activeTab} onChange={handleTabChange} />
+      <BottomNav active={activeTab} onChange={handleTabChange} onAdd={() => { setEditing(null); setAddNoCard(false); setShowAdd(true); }} />
 
       {showProfile && (
         <ProfileModal
