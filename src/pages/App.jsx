@@ -549,6 +549,16 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             <EmptyState onAdd={() => setShowAdd(true)} onImport={() => setShowImport(true)} />
           ) : (
             <main className="px-5 space-y-5 pt-6">
+              {/* Greeting */}
+              <div className="space-y-0.5 pb-1">
+                <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                  Buenas, {userEmail ? userEmail.split('@')[0] : 'usuario'}
+                </div>
+                <div className="font-serif italic text-[28px] leading-tight text-zinc-100">
+                  <span className="text-zinc-500">Tu plata,</span> en orden.
+                </div>
+              </div>
+
               <MonthSwitcher
                 year={year}
                 month={month}
@@ -558,16 +568,6 @@ function Dashboard({ userId, userEmail, onSignOut }) {
                   setCurrentDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
                 }
               />
-
-              {/* Greeting */}
-              <div className="space-y-0.5">
-                <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                  Buenas, {userEmail ? userEmail.split('@')[0] : 'usuario'}
-                </div>
-                <div className="font-serif italic text-[28px] leading-tight text-zinc-100">
-                  <span className="text-zinc-500">Tu plata,</span> en orden.
-                </div>
-              </div>
 
               <div className="flex gap-2">
                 <button
@@ -637,21 +637,6 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             </main>
           )}
 
-          <button
-            onClick={() => {
-              setEditing(null);
-              setAddNoCard(false);
-              setShowAdd(true);
-            }}
-            aria-label="Agregar gasto"
-            className="fixed right-5 z-30 h-14 w-14 rounded-full bg-lime-300 text-zinc-950 flex items-center justify-center hover:bg-lime-200 active:scale-95 transition-all"
-            style={{
-              bottom: 'calc(4.5rem + env(safe-area-inset-bottom))',
-              boxShadow: '0 10px 30px -5px rgba(190, 242, 100, 0.4), 0 0 0 1px rgba(190, 242, 100, 0.1)',
-            }}
-          >
-            <Plus size={26} strokeWidth={2.5} />
-          </button>
         </div>
       )}
 
