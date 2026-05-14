@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
-import { formatARS } from '../lib/formatters';
+import { TrendingUp, TrendingDown, Target } from 'lucide-react';
+import { formatARS, formatUSD } from '../lib/formatters';
 
 const MONTH_NAMES_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-const MONTH_NAMES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 function useCountUp(target, duration = 600) {
   const [value, setValue] = useState(0);
@@ -35,7 +34,7 @@ function useCountUp(target, duration = 600) {
   return value;
 }
 
-function HeroKPI({ total, delta, budget, monthlyInflation = 0, currentMonth = 0, displayYear, displayMonth }) {
+function HeroKPI({ total, nextMonth, delta, cuotasCount, budget, monthlyInflation = 0, currentMonth = 0, goal, onOpenGoal }) {
   const animatedTotal = useCountUp(total);
 
   const adjustedBudget = budget > 0 && monthlyInflation > 0
@@ -46,41 +45,24 @@ function HeroKPI({ total, delta, budget, monthlyInflation = 0, currentMonth = 0,
   const hasDelta = delta !== 0 && !isNaN(delta) && isFinite(delta);
   const deltaUp = delta > 0;
 
+  // Format the animated total as parts: integer and decimals
   const totalStr = animatedTotal.toFixed(2);
   const [intPart, decPart] = totalStr.split('.');
   const formattedInt = Number(intPart).toLocaleString('es-AR');
 
-  // Use displayYear/displayMonth if provided, else fallback to today
+  // Month label (currentMonth is 0-indexed month number or actual month index)
   const now = new Date();
-  const refYear = displayYear ?? now.getFullYear();
-  const refMonth = displayMonth ?? now.getMonth();
-  const isCurrentMonth = refYear === now.getFullYear() && refMonth === now.getMonth();
+  const monthLabel = MONTH_NAMES_SHORT[now.getMonth()];
 
-  const monthFullLabel = MONTH_NAMES_FULL[refMonth];
-  const prevMonthIdx = refMonth === 0 ? 11 : refMonth - 1;
+  // Previous month label
+  const prevMonthIdx = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
   const prevMonthLabel = MONTH_NAMES_SHORT[prevMonthIdx];
-
-  // Date display: "26 May" (today if current month, else last day of month)
-  const dateDisplay = isCurrentMonth
-    ? `${now.getDate()} ${MONTH_NAMES_SHORT[now.getMonth()]}`
-    : `${new Date(refYear, refMonth + 1, 0).getDate()} ${MONTH_NAMES_SHORT[refMonth]}`;
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-[22px] p-[18px] mx-0 space-y-4">
-      {/* Header row: kicker + date */}
-      <div className="flex items-center justify-between">
-        <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-          Gastaste en {monthFullLabel}
-        </div>
-        <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-600">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          {dateDisplay}
-        </div>
+      {/* Kicker */}
+      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+        Gastaste en {monthLabel}
       </div>
 
       {/* Main amount */}
@@ -115,9 +97,7 @@ function HeroKPI({ total, delta, budget, monthlyInflation = 0, currentMonth = 0,
       {adjustedBudget > 0 && (
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
-            <span className="font-mono text-[10px] text-zinc-500">
-              de {formatARS(adjustedBudget)} <span className="uppercase tracking-[1px]">Presupuesto</span>
-            </span>
+            <span className="font-mono text-[10px] uppercase tracking-[1px] text-zinc-500">Presupuesto</span>
             <span className={`font-mono text-[10px] ${overBudget ? 'text-red-400' : 'text-zinc-500'}`}>
               {Math.round(budgetPct)}% usado
             </span>
@@ -147,7 +127,70 @@ function HeroKPI({ total, delta, budget, monthlyInflation = 0, currentMonth = 0,
           )}
         </div>
       )}
+
+      {/* Footer stats */}
+      <div className="pt-3 border-t border-zinc-800 grid grid-cols-2 gap-3">
+        <div className="bg-zinc-800/40 rounded-xl px-3 py-2.5 border border-zinc-800">
+          <div className="font-mono text-[10px] uppercase tracking-[1px] text-zinc-500 mb-1">Próximo mes</div>
+          <div className="font-mono text-sm font-medium text-zinc-100">{formatARS(nextMonth)}</div>
+        </div>
+        <div className="bg-zinc-800/40 rounded-xl px-3 py-2.5 border border-zinc-800">
+          <div className="font-mono text-[10px] uppercase tracking-[1px] text-zinc-500 mb-1">Items</div>
+          <div className="font-mono text-sm font-medium text-zinc-100">{cuotasCount}</div>
+        </div>
+      </div>
+
+      {/* Savings goal */}
+      <GoalCard goal={goal} onOpen={onOpenGoal} />
     </div>
+  );
+}
+
+function GoalCard({ goal, onOpen }) {
+  if (!goal) {
+    return (
+      <button
+        onClick={onOpen}
+        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-dashed border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700 transition-all duration-200 font-mono text-[11px] cursor-pointer active:scale-[0.98]"
+      >
+        <Target size={14} />
+        Agregar meta de ahorro
+      </button>
+    );
+  }
+
+  const fmt = goal.currency === 'USD' ? formatUSD : formatARS;
+  const deadlineDate = goal.deadline ? new Date(goal.deadline + 'T12:00:00') : null;
+  const now = new Date();
+
+  let monthsLeft = null;
+  let monthlyNeeded = null;
+  if (deadlineDate && deadlineDate > now) {
+    monthsLeft = Math.ceil((deadlineDate - now) / (1000 * 60 * 60 * 24 * 30));
+    monthlyNeeded = goal.amount / monthsLeft;
+  }
+
+  return (
+    <button
+      onClick={onOpen}
+      className="w-full text-left bg-lime-400/5 border border-lime-400/20 rounded-2xl px-3 py-3 hover:bg-lime-400/10 hover:border-lime-400/30 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5 font-mono text-[11px] text-lime-400 font-medium">
+          <Target size={12} />
+          {goal.name}
+        </div>
+        <span className="font-mono text-[11px] text-zinc-400">{fmt(goal.amount)}</span>
+      </div>
+      {monthlyNeeded && (
+        <div className="font-mono text-[10px] text-zinc-500">
+          {fmt(monthlyNeeded)}/mes durante {monthsLeft} {monthsLeft === 1 ? 'mes' : 'meses'}
+        </div>
+      )}
+      {!deadlineDate && (
+        <div className="font-mono text-[10px] text-zinc-500">Sin fecha límite</div>
+      )}
+    </button>
   );
 }
 
