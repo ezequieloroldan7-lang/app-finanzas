@@ -110,7 +110,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
   const { toasts, showToast, dismissToast } = useToast();
   const {
     myFolder, members: sharedMembers, invites: sharedInvites,
-    pendingReceivedInvites, customPartnerName, loading: sharedFoldersLoading,
+    pendingReceivedInvites, loading: sharedFoldersLoading,
     createFolder, inviteMember, removePartner, renamePartner,
     acceptInvite, rejectInvite,
   } = useSharedFolders(
@@ -522,9 +522,8 @@ function Dashboard({ userId, userEmail, onSignOut }) {
           <header className="sticky top-0 z-20 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-900 px-5 pt-6 pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-serif italic text-zinc-100 text-xl leading-none">
-                  VUE<span className="text-lime-400">·</span>
-                </span>
+                <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">VUE Finanzas</div>
+                <h1 className="text-2xl text-zinc-50 mt-0.5 font-serif-display italic">Inicio</h1>
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -549,16 +548,6 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             <EmptyState onAdd={() => setShowAdd(true)} onImport={() => setShowImport(true)} />
           ) : (
             <main className="px-5 space-y-5 pt-6">
-              {/* Greeting */}
-              <div className="space-y-0.5 pb-1">
-                <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                  Buenas, {userEmail ? userEmail.split('@')[0] : 'usuario'}
-                </div>
-                <div className="font-serif italic text-[28px] leading-tight text-zinc-100">
-                  <span className="text-zinc-500">Tu plata,</span> en orden.
-                </div>
-              </div>
-
               <MonthSwitcher
                 year={year}
                 month={month}
@@ -637,6 +626,21 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             </main>
           )}
 
+          <button
+            onClick={() => {
+              setEditing(null);
+              setAddNoCard(false);
+              setShowAdd(true);
+            }}
+            aria-label="Agregar gasto"
+            className="fixed right-5 z-30 h-14 w-14 rounded-full bg-lime-300 text-zinc-950 flex items-center justify-center hover:bg-lime-200 active:scale-95 transition-all"
+            style={{
+              bottom: 'calc(4.5rem + env(safe-area-inset-bottom))',
+              boxShadow: '0 10px 30px -5px rgba(190, 242, 100, 0.4), 0 0 0 1px rgba(190, 242, 100, 0.1)',
+            }}
+          >
+            <Plus size={26} strokeWidth={2.5} />
+          </button>
         </div>
       )}
 
@@ -680,7 +684,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
             onOpenProfile={() => setShowProfile(true)}
             userId={userId}
             sharedFolderId={myFolder?.id || null}
-            partnerName={customPartnerName || partnerMember?.displayName || null}
+            partnerName={partnerMember?.displayName || null}
             partnerMember={partnerMember}
             partnerInvite={partnerInvite}
             receivedPendingInvites={pendingReceivedInvites}
@@ -761,7 +765,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
         />
       )}
 
-      <BottomNav active={activeTab} onChange={handleTabChange} onAdd={() => { setEditing(null); setAddNoCard(false); setShowAdd(true); }} />
+      <BottomNav active={activeTab} onChange={handleTabChange} />
 
       {showProfile && (
         <ProfileModal

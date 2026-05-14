@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { TrendingUp, TrendingDown, Target } from 'lucide-react';
 import { formatARS, formatUSD } from '../lib/formatters';
 
-const MONTH_NAMES_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-
 function useCountUp(target, duration = 600) {
   const [value, setValue] = useState(0);
   const rafRef = useRef(null);
@@ -11,14 +9,16 @@ function useCountUp(target, duration = 600) {
 
   useEffect(() => {
     if (typeof target !== 'number' || isNaN(target)) return;
-    const diff = target;
+    const start = 0;
+    const diff = target - start;
 
     const animate = (timestamp) => {
       if (!startRef.current) startRef.current = timestamp;
       const elapsed = timestamp - startRef.current;
       const progress = Math.min(elapsed / duration, 1);
+      // easeOutCubic
       const ease = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.round(diff * ease));
+      setValue(Math.round(start + diff * ease));
       if (progress < 1) {
         rafRef.current = requestAnimationFrame(animate);
       }
@@ -45,103 +45,103 @@ function HeroKPI({ total, nextMonth, delta, cuotasCount, budget, monthlyInflatio
   const hasDelta = delta !== 0 && !isNaN(delta) && isFinite(delta);
   const deltaUp = delta > 0;
 
-  // Format the animated total as parts: integer and decimals
-  const totalStr = animatedTotal.toFixed(2);
-  const [intPart, decPart] = totalStr.split('.');
-  const formattedInt = Number(intPart).toLocaleString('es-AR');
-
-  // Month label (currentMonth is 0-indexed month number or actual month index)
-  const now = new Date();
-  const monthLabel = MONTH_NAMES_SHORT[now.getMonth()];
-
-  // Previous month label
-  const prevMonthIdx = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
-  const prevMonthLabel = MONTH_NAMES_SHORT[prevMonthIdx];
-
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-[22px] p-[18px] mx-0 space-y-4">
-      {/* Kicker */}
-      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-        Gastaste en {monthLabel}
-      </div>
+    <div className="bg-gradient-to-br from-zinc-900/90 to-zinc-950 border border-zinc-800/60 rounded-3xl p-6 relative overflow-hidden shadow-xl shadow-black/30 transition-all duration-300 hover:border-zinc-700/60 fade-in-up">
+      {/* Decorative glow */}
+      <div className="absolute -top-28 -right-28 w-80 h-80 bg-lime-400/[0.07] rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-sky-400/[0.04] rounded-full blur-3xl pointer-events-none" />
 
-      {/* Main amount */}
-      <div className="flex items-baseline gap-0.5 leading-none">
-        <span className="font-mono text-[16px] text-zinc-400 self-end mb-[6px]">$</span>
-        <span className="font-mono text-[44px] font-medium text-zinc-100 tracking-[-1.5px] leading-none">
-          {formattedInt}
-        </span>
-        <span className="font-mono text-[16px] text-zinc-500 self-end mb-[6px]">,{decPart}</span>
-      </div>
+      <div className="relative">
+        {/* Label */}
+        <div className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-semibold mb-3">
+          Total a pagar
+        </div>
 
-      {/* Delta pill + vs label */}
-      <div className="flex items-center gap-2">
-        {hasDelta ? (
-          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full font-mono text-[11px] ${
-            deltaUp
-              ? 'bg-red-400/10 border border-red-400/25 text-red-400'
-              : 'bg-lime-400/10 border border-lime-400/25 text-lime-400'
-          }`}>
-            {deltaUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-            {(deltaUp ? '+' : '') + (delta * 100).toFixed(0)}%
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-2 py-1 rounded-full bg-zinc-800/60 border border-zinc-700/40 text-zinc-500 font-mono text-[11px]">
-            — sin cambio
-          </span>
-        )}
-        <span className="font-mono text-[11px] text-zinc-500">vs {prevMonthLabel}</span>
-      </div>
+        {/* Main KPI number with count-up */}
+        <div className="font-serif-display italic text-5xl text-zinc-50 leading-none tracking-tight tabular-nums count-up">
+          {formatARS(animatedTotal)}
+        </div>
 
-      {/* Budget bar */}
-      {adjustedBudget > 0 && (
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-center">
-            <span className="font-mono text-[10px] uppercase tracking-[1px] text-zinc-500">Presupuesto</span>
-            <span className={`font-mono text-[10px] ${overBudget ? 'text-red-400' : 'text-zinc-500'}`}>
-              {Math.round(budgetPct)}% usado
+        {/* Delta badge */}
+        <div className="mt-3 flex items-center gap-2.5">
+          {hasDelta ? (
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                deltaUp
+                  ? 'text-red-400 bg-red-400/10 border-red-400/20'
+                  : 'text-lime-400 bg-lime-400/10 border-lime-400/20'
+              }`}
+            >
+              {deltaUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+              {(deltaUp ? '+' : '') + (delta * 100).toFixed(0)}%
             </span>
-          </div>
-          <div className="h-1 rounded-full bg-zinc-800 overflow-hidden">
-            <div
-              role="progressbar"
-              aria-valuenow={Math.round(budgetPct)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Uso del presupuesto"
-              className="h-full rounded-full transition-all duration-700 ease-out"
-              style={{
-                width: `${budgetPct}%`,
-                background: overBudget
-                  ? 'linear-gradient(90deg, #f87171, #ef4444)'
-                  : budgetPct > 85
-                    ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
-                    : '#bef264',
-              }}
-            />
-          </div>
-          {overBudget && (
-            <div className="font-mono text-[10px] text-red-400">
-              Superaste el presupuesto en {formatARS(total - adjustedBudget)}
-            </div>
+          ) : (
+            <span className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full border text-zinc-600 border-zinc-800 bg-zinc-900/50">
+              — sin cambio
+            </span>
           )}
+          <span className="text-zinc-500 text-xs">vs. mes anterior</span>
         </div>
-      )}
 
-      {/* Footer stats */}
-      <div className="pt-3 border-t border-zinc-800 grid grid-cols-2 gap-3">
-        <div className="bg-zinc-800/40 rounded-xl px-3 py-2.5 border border-zinc-800">
-          <div className="font-mono text-[10px] uppercase tracking-[1px] text-zinc-500 mb-1">Próximo mes</div>
-          <div className="font-mono text-sm font-medium text-zinc-100">{formatARS(nextMonth)}</div>
+        {/* Budget bar */}
+        {budget > 0 && (
+          <div className="mt-5">
+            <div className="flex justify-between text-xs mb-2">
+              <span className="text-zinc-500">
+                Presupuesto{monthlyInflation > 0 ? ` (ajustado ${monthlyInflation}%/mes)` : ''}
+              </span>
+              <span className={`font-medium tabular-nums ${overBudget ? 'text-red-400' : 'text-zinc-400'}`}>
+                {formatARS(total)} / {formatARS(adjustedBudget)}
+              </span>
+            </div>
+            <div className="h-2 bg-zinc-800/80 rounded-full overflow-hidden">
+              <div
+                role="progressbar"
+                aria-valuenow={Math.round(budgetPct)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Uso del presupuesto"
+                className="h-full rounded-full transition-all duration-700 ease-out"
+                style={{
+                  width: `${budgetPct}%`,
+                  background: overBudget
+                    ? 'linear-gradient(90deg, #f87171, #ef4444)'
+                    : budgetPct > 85
+                      ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+                      : 'linear-gradient(90deg, #bef264, #84cc16)',
+                }}
+              />
+            </div>
+            {overBudget && (
+              <div className="text-[10px] text-red-400 mt-1.5 font-medium">
+                Superaste el presupuesto en {formatARS(total - adjustedBudget)}
+              </div>
+            )}
+            {!overBudget && budgetPct > 85 && (
+              <div className="text-[10px] text-amber-400 mt-1.5 font-medium">⚠ Cerca del límite de presupuesto</div>
+            )}
+          </div>
+        )}
+
+        {/* Footer stats */}
+        <div className="mt-5 pt-5 border-t border-zinc-800/60 grid grid-cols-2 gap-4">
+          <div className="bg-zinc-900/50 rounded-2xl px-3 py-2.5 border border-zinc-800/40 transition-colors hover:border-zinc-700/60">
+            <div className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium mb-1">Próximo mes</div>
+            <div className="text-zinc-100 font-semibold tabular-nums text-sm">
+              {formatARS(nextMonth)}
+            </div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-2xl px-3 py-2.5 border border-zinc-800/40 transition-colors hover:border-zinc-700/60">
+            <div className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium mb-1">Items</div>
+            <div className="text-zinc-100 font-semibold tabular-nums text-sm">
+              {cuotasCount}
+            </div>
+          </div>
         </div>
-        <div className="bg-zinc-800/40 rounded-xl px-3 py-2.5 border border-zinc-800">
-          <div className="font-mono text-[10px] uppercase tracking-[1px] text-zinc-500 mb-1">Items</div>
-          <div className="font-mono text-sm font-medium text-zinc-100">{cuotasCount}</div>
-        </div>
+
+        {/* Savings goal */}
+        <GoalCard goal={goal} onOpen={onOpenGoal} />
       </div>
-
-      {/* Savings goal */}
-      <GoalCard goal={goal} onOpen={onOpenGoal} />
     </div>
   );
 }
@@ -151,7 +151,7 @@ function GoalCard({ goal, onOpen }) {
     return (
       <button
         onClick={onOpen}
-        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-dashed border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700 transition-all duration-200 font-mono text-[11px] cursor-pointer active:scale-[0.98]"
+        className="mt-4 w-full flex items-center gap-2 px-3 py-2.5 rounded-2xl border border-dashed border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700 transition-all duration-200 text-xs cursor-pointer active:scale-[0.98]"
       >
         <Target size={14} />
         Agregar meta de ahorro
@@ -173,22 +173,22 @@ function GoalCard({ goal, onOpen }) {
   return (
     <button
       onClick={onOpen}
-      className="w-full text-left bg-lime-400/5 border border-lime-400/20 rounded-2xl px-3 py-3 hover:bg-lime-400/10 hover:border-lime-400/30 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+      className="mt-4 w-full text-left bg-lime-400/5 border border-lime-400/20 rounded-2xl px-3 py-3 hover:bg-lime-400/10 hover:border-lime-400/30 transition-all duration-200 cursor-pointer active:scale-[0.98]"
     >
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1.5 font-mono text-[11px] text-lime-400 font-medium">
+        <div className="flex items-center gap-1.5 text-xs text-lime-400 font-semibold">
           <Target size={12} />
           {goal.name}
         </div>
-        <span className="font-mono text-[11px] text-zinc-400">{fmt(goal.amount)}</span>
+        <span className="text-xs text-zinc-400 font-semibold tabular-nums">{fmt(goal.amount)}</span>
       </div>
       {monthlyNeeded && (
-        <div className="font-mono text-[10px] text-zinc-500">
+        <div className="text-[10px] text-zinc-500">
           {fmt(monthlyNeeded)}/mes durante {monthsLeft} {monthsLeft === 1 ? 'mes' : 'meses'}
         </div>
       )}
       {!deadlineDate && (
-        <div className="font-mono text-[10px] text-zinc-500">Sin fecha límite</div>
+        <div className="text-[10px] text-zinc-500">Sin fecha límite</div>
       )}
     </button>
   );
