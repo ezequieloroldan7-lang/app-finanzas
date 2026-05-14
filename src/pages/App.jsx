@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { CalendarDays, Plus, X, UserCircle2, FileText } from 'lucide-react';
+import { CalendarDays, X, UserCircle2 } from 'lucide-react';
 import { monthKey, uid } from '../lib/formatters';
 import { exportToExcel } from '../lib/exportExcel';
 import {
@@ -35,9 +35,8 @@ import HeroKPI from '../components/HeroKPI';
 import HealthScoreCard from '../components/HealthScoreCard';
 import DebtProjectionCard from '../components/DebtProjectionCard';
 import ProactiveInsightsCard from '../components/ProactiveInsightsCard';
-import CategoryStackedChart from '../components/CategoryStackedChart';
-import BalanceCard from '../components/BalanceCard';
-import CardHistoryChart from '../components/CardHistoryChart';
+import MonthlyChartCard from '../components/MonthlyChartCard';
+import MovimientosCard from '../components/MovimientosCard';
 import AddExpenseModal from '../components/AddExpenseModal';
 import AddIncomeModal from '../components/AddIncomeModal';
 import SettingsModal from '../components/SettingsModal';
@@ -157,6 +156,11 @@ function Dashboard({ userId, userEmail, onSignOut }) {
     try { return localStorage.getItem('vue_active_tab') || 'inicio'; } catch { return 'inicio'; }
   });
   const handleTabChange = (tab) => {
+    if (tab === 'mas') {
+      setShowMasSheet(true);
+      return;
+    }
+    setShowMasSheet(false);
     setActiveTab(tab);
     try { localStorage.setItem('vue_active_tab', tab); } catch {}
   };
@@ -182,6 +186,7 @@ function Dashboard({ userId, userEmail, onSignOut }) {
     return !localStorage.getItem('onboarding_v1_done');
   });
   const [showProfile, setShowProfile] = useState(false);
+  const [showMasSheet, setShowMasSheet] = useState(false);
 
   const loaded =
     !expLoading && !cardsLoading && !catsLoading && !recurLoading &&
@@ -569,54 +574,33 @@ function Dashboard({ userId, userEmail, onSignOut }) {
                 }
               />
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setEditing(null); setAddNoCard(false); setShowAdd(true); }}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-lime-300/10 text-lime-300 border border-lime-300/20 hover:bg-lime-300/15 transition-colors text-sm font-medium"
-                >
-                  <Plus size={14} />
-                  Nuevo gasto
-                </button>
-                <button
-                  onClick={() => setShowImport(true)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 transition-colors text-sm"
-                >
-                  <FileText size={14} />
-                  Importar resumen
-                </button>
-              </div>
-
-              <BalanceCard
-                totalIngresos={currentMonthIncome}
-                totalGastos={currentMonthTotal}
-              />
-
-              <CardHistoryChart
-                expenses={expenses}
-                recurring={recurring}
-                cards={cards}
-                currentYear={year}
-                currentMonth={month}
-                months={12}
-              />
-
-              {momData.some(d => categories.some(c => d[c.id] > 0)) && (
-                <CategoryStackedChart data={momData} categories={categories} months={12} />
-              )}
-
               <HeroKPI
                 total={currentMonthTotal}
-                nextMonth={nextMonthTotal}
                 delta={monthDelta}
-                cuotasCount={currentMonthCuotas.length}
                 budget={budget?.monthly}
                 monthlyInflation={budget?.monthlyInflation || 0}
                 currentMonth={month}
-                goal={savingsGoal}
-                onOpenGoal={() => setShowGoal(true)}
+                displayYear={year}
+                displayMonth={month}
+              />
+
+              <MonthlyChartCard
+                momData={momData}
+                categories={categories}
+                currentYear={year}
+                currentMonth={month}
               />
 
               <HealthScoreCard score={healthScore} />
+
+              <MovimientosCard
+                expenses={expenses}
+                income={income}
+                categories={categories}
+                incomeCategories={incomeCategories}
+                onVerGastos={() => handleTabChange('gastos')}
+                onVerIngresos={() => handleTabChange('ingresos')}
+              />
 
               <DebtProjectionCard
                 expenses={expenses}
@@ -759,6 +743,44 @@ function Dashboard({ userId, userEmail, onSignOut }) {
           savingsGoal={savingsGoal}
           onOpenProfile={() => setShowProfile(true)}
         />
+      )}
+
+      {/* "Más" bottom sheet */}
+      {showMasSheet && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end"
+          onClick={() => setShowMasSheet(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Más opciones"
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative bg-zinc-900 border border-zinc-800 rounded-t-[28px] p-5 pb-8 space-y-3"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-zinc-700 rounded-full mx-auto mb-4" />
+            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500 mb-3">Más opciones</div>
+            {[
+              { id: 'ingresos',  label: 'Ingresos',         emoji: '📈' },
+              { id: 'archivos',  label: 'Archivos',          emoji: '📁' },
+              { id: 'chat',      label: 'Asistente IA',     emoji: '🤖' },
+            ].map(item => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setShowMasSheet(false);
+                  try { localStorage.setItem('vue_active_tab', item.id); } catch {}
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-800 transition-colors text-left"
+              >
+                <span className="text-xl">{item.emoji}</span>
+                <span className="font-mono text-[13px] text-zinc-200">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       <BottomNav active={activeTab} onChange={handleTabChange} onAdd={() => { setEditing(null); setAddNoCard(false); setShowAdd(true); }} />
