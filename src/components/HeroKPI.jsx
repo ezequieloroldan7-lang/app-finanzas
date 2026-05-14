@@ -77,7 +77,11 @@ function HeroKPI({ total, nextMonth, delta, cuotasCount, budget, monthlyInflatio
       {/* Delta pill + vs label */}
       <div className="flex items-center gap-2">
         {hasDelta ? (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-lime-400/10 border border-lime-400/25 text-lime-400 font-mono text-[11px]">
+          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full font-mono text-[11px] ${
+            deltaUp
+              ? 'bg-red-400/10 border border-red-400/25 text-red-400'
+              : 'bg-lime-400/10 border border-lime-400/25 text-lime-400'
+          }`}>
             {deltaUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
             {(deltaUp ? '+' : '') + (delta * 100).toFixed(0)}%
           </span>
