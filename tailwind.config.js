@@ -4,7 +4,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        'serif-display': ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        sans: ['Geist', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['Geist Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        serif: ['Newsreader', 'ui-serif', 'Georgia', 'serif'],
+        'serif-display': ['Newsreader', 'ui-serif', 'Georgia', 'serif'],
       },
       keyframes: {
         'fade-in': {
